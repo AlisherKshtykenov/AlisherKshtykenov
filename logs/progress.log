@@ -1,6 +1,6 @@
-# update_progress 2026-10-14 21:21:44
+# update_progress 2026-10-14 21:33:36
 INFO  tests/activations/test_sigmoid.py: pytest — [33m[33mno tests ran[0m[33m in 0.00s[0m[0m
 INFO  tests/losses/test_log_loss.py: pytest — [33m[33mno tests ran[0m[33m in 0.00s[0m[0m
-INFO  tests/model/test_logistic_regression.py: pytest — [33m[33mno tests ran[0m[33m in 0.00s[0m[0m
-INFO  tests/optimizers/test_batch_gd.py: pytest — [33m[33mno tests ran[0m[33m in 0.00s[0m[0m
+INFO  tests/model/test_logistic_regression.py: pytest — [33m[33mno tests ran[0m[33m in 0.02s[0m[0m
+INFO  tests/optimizers/test_batch_gd.py: pytest — [33m[33mno tests ran[0m[33m in 0.01s[0m[0m
 INFO  progress_history.csv: проценты не изменились — строка не дописана
