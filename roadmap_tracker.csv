@@ -1,0 +1,266 @@
+﻿topic,chapter,step,learned,repeated,readme,experiment,test_create,test_run,slug,path,description,header
+Logistic Regression (логистическая регрессия),model/supervised/classification,model,0.5,1,0,1,1,0,logistic_regression,src/model/supervised/classification/logistic_regression/logistic_regression.py,,missing
+k-NN (k ближайших соседей),model/supervised/classification,model,0,0,0,0,0,0,,,,
+Naive Bayes (наивный Байес),model/supervised/classification,model,0,0,0,0,0,0,naive_bayes,src/model/supervised/classification/naive_bayes/naive_bayes.py,,ok
+Decision Tree (дерево решений),model/supervised/classification,model,0,0,0,0,0,0,decision_tree,src/model/supervised/classification/decision_tree/decision_tree.py,,ok
+Random Forest (случайный лес),model/supervised/classification,model,0,0,0,0,0,0,random_forest,src/model/supervised/classification/random_forest/random_forest.py,,ok
+"Gradient Boosting (градиентный бустинг: XGBoost, LightGBM, CatBoost)",model/supervised/classification,model,0,0,0,0,0,0,gradient_boosting,src/model/supervised/classification/gradient_boosting/gradient_boosting.py,,ok
+SVM (метод опорных векторов),model/supervised/classification,model,0,0,0,0,0,0,svm,src/model/supervised/classification/svm/svm.py,,ok
+Linear Regression (линейная регрессия),model/supervised/regression,model,0,0,0,0,0,0,linear_regression,src/model/supervised/regression/linear_regression/linear_regression.py,,ok
+Ridge / Lasso (регрессия с регуляризацией),model/supervised/regression,model,0,0,0,0,0,0,,,,
+Polynomial Regression (полиномиальная),model/supervised/regression,model,0,0,0,0,0,0,polynomial_regression,src/model/supervised/regression/polynomial_regression/polynomial_regression.py,,ok
+k-NN,model/supervised/regression,model,0,0,0,0,0,0,,,,
+Decision Tree,model/supervised/regression,model,0,0,0,0,0,0,decision_tree,src/model/supervised/regression/decision_tree/decision_tree.py,,ok
+Random Forest,model/supervised/regression,model,0,0,0,0,0,0,random_forest,src/model/supervised/regression/random_forest/random_forest.py,,ok
+Gradient Boosting,model/supervised/regression,model,0,0,0,0,0,0,gradient_boosting,src/model/supervised/regression/gradient_boosting/gradient_boosting.py,,ok
+SVR (опорные векторы для регрессии),model/supervised/regression,model,0,0,0,0,0,0,svr,src/model/supervised/regression/svr/svr.py,,ok
+LambdaMART,model/supervised/ranking,model,0,0,0,0,0,0,lambdamart,src/model/supervised/ranking/lambdamart/lambdamart.py,,ok
+RankNet,model/supervised/ranking,model,0,0,0,0,0,0,ranknet,src/model/supervised/ranking/ranknet/ranknet.py,,ok
+бустинг с ranking loss,model/supervised/ranking,model,0,0,0,0,0,0,,,,
+K-Means,model/unsupervised/clustering,model,0,0,0,0,0,0,,,,
+Hierarchical (иерархическая),model/unsupervised/clustering,model,0,0,0,0,0,0,hierarchical,src/model/unsupervised/clustering/hierarchical/hierarchical.py,,ok
+DBSCAN / HDBSCAN (по плотности),model/unsupervised/clustering,model,0,0,0,0,0,0,,,,
+Gaussian Mixture (смесь гауссиан),model/unsupervised/clustering,model,0,0,0,0,0,0,gaussian_mixture,src/model/unsupervised/clustering/gaussian_mixture/gaussian_mixture.py,,ok
+Mean Shift,model/unsupervised/clustering,model,0,0,0,0,0,0,mean_shift,src/model/unsupervised/clustering/mean_shift/mean_shift.py,,ok
+Spectral Clustering (спектральная),model/unsupervised/clustering,model,0,0,0,0,0,0,,,,
+PCA (метод главных компонент),model/unsupervised/dimensionality_reduction,model,0,0,0,0,0,0,pca,src/model/unsupervised/dimensionality_reduction/pca/pca.py,,ok
+t-SNE,model/unsupervised/dimensionality_reduction,model,0,0,0,0,0,0,,,,
+UMAP,model/unsupervised/dimensionality_reduction,model,0,0,0,0,0,0,umap,src/model/unsupervised/dimensionality_reduction/umap/umap.py,,ok
+"LDA (линейный дискриминантный анализ, вообще-то он с учителем)",model/unsupervised/dimensionality_reduction,model,0,0,0,0,0,0,lda,src/model/unsupervised/dimensionality_reduction/lda/lda.py,,ok
+Autoencoder (автоэнкодер),model/unsupervised/dimensionality_reduction,model,0,0,0,0,0,0,autoencoder,src/model/unsupervised/dimensionality_reduction/autoencoder/autoencoder.py,,ok
+Isolation Forest (изолирующий лес),model/unsupervised/anomaly_detection,model,0,0,0,0,0,0,isolation_forest,src/model/unsupervised/anomaly_detection/isolation_forest/isolation_forest.py,,ok
+One-Class SVM,model/unsupervised/anomaly_detection,model,0,0,0,0,0,0,one_class_svm,src/model/unsupervised/anomaly_detection/one_class_svm/one_class_svm.py,,ok
+LOF (локальный фактор выброса),model/unsupervised/anomaly_detection,model,0,0,0,0,0,0,lof,src/model/unsupervised/anomaly_detection/lof/lof.py,,ok
+автоэнкодер по ошибке восстановления,model/unsupervised/anomaly_detection,model,0,0,0,0,0,0,,,,
+Apriori,model/unsupervised/association_rules,model,0,0,0,0,0,0,apriori,src/model/unsupervised/association_rules/apriori/apriori.py,,ok
+FP-Growth,model/unsupervised/association_rules,model,0,0,0,0,0,0,fp_growth,src/model/unsupervised/association_rules/fp_growth/fp_growth.py,,ok
+Q-learning,model/reinforcement/control,model,0,0,0,0,0,0,q_learning,src/model/reinforcement/value_based/q_learning/q_learning.py,,ok
+SARSA,model/reinforcement/control,model,0,0,0,0,0,0,sarsa,src/model/reinforcement/value_based/sarsa/sarsa.py,,ok
+DQN (глубокий Q-learning),model/reinforcement/control,model,0,0,0,0,0,0,dqn,src/model/reinforcement/value_based/dqn/dqn.py,,ok
+Policy Gradient,model/reinforcement/control,model,0,0,0,0,0,0,policy_gradient,src/model/reinforcement/policy_based/policy_gradient/policy_gradient.py,,ok
+PPO,model/reinforcement/control,model,0,0,0,0,0,0,ppo,src/model/reinforcement/policy_based/ppo/ppo.py,,ok
+Actor-Critic,model/reinforcement/control,model,0,0,0,0,0,0,actor_critic,src/model/reinforcement/policy_based/actor_critic/actor_critic.py,,ok
+MCTS (поиск по дереву Монте-Карло),model/reinforcement/control,model,0,0,0,0,0,0,mcts,src/model/reinforcement/planning/mcts/mcts.py,,ok
+Image Classification (классификация изображений),model/deep_learning,model,0,0,0,0,0,0,,,,
+Object Detection (детекция объектов),model/deep_learning,model,0,0,0,0,0,0,,,,
+Segmentation (сегментация),model/deep_learning,model,0,0,0,0,0,0,,,,
+Face Recognition (распознавание лиц),model/deep_learning,model,0,0,0,0,0,0,,,,
+"ASR, Speech Recognition (распознавание речи)",model/deep_learning,model,0,0,0,0,0,0,,,,
+"TTS, Text-to-Speech (синтез речи)",model/deep_learning,model,0,0,0,0,0,0,,,,
+NLP: Text Classification (классификация текста),model/deep_learning,model,0,0,0,0,0,0,,,,
+Seq2Seq: Machine Translation (машинный перевод),model/deep_learning,model,0,0,0,0,0,0,,,,
+Generative models (генеративные модели),model/deep_learning,model,0,0,0,0,0,0,,,,
+Time Series Forecasting (прогноз временных рядов),model/deep_learning,model,0,0,0,0,0,0,,,,
+Recommender Systems (рекомендательные системы),model/deep_learning,model,0,0,0,0,0,0,,,,
+Histogram (гистограмма),analysis/eda/distributions,eda,0,0,0,0,0,0,histogram,src/data_prep/eda/distributions/histogram.py,,missing
+KDE (оценка плотности ядром),analysis/eda/distributions,eda,0,0,0,0,0,0,kde,src/data_prep/eda/distributions/kde.py,,missing
+Boxplot (ящик с усами),analysis/eda/distributions,eda,0,0,0,0,0,0,boxplot,src/data_prep/eda/distributions/boxplot.py,,missing
+Pearson (корреляция Пирсона),analysis/eda/correlations,eda,0,0,0,0,0,0,pearson,src/data_prep/eda/correlations/pearson.py,,missing
+Spearman (корреляция Спирмена),analysis/eda/correlations,eda,0,0,0,0,0,0,spearman,src/data_prep/eda/correlations/spearman.py,,missing
+Cramér's V (V Крамера),analysis/eda/correlations,eda,0,0,0,0,0,0,cramers_v,src/data_prep/eda/correlations/cramers_v.py,,missing
+Mutual Information (взаимная информация),analysis/eda/correlations,eda,0,0,0,0,0,0,mutual_information,src/data_prep/eda/correlations/mutual_information.py,,missing
+Pairplot (попарные графики),analysis/eda/multivariate,eda,0,0,0,0,0,0,pairplot,src/data_prep/eda/multivariate/pairplot.py,,missing
+Heatmap (тепловая карта),analysis/eda/multivariate,eda,0,0,0,0,0,0,heatmap,src/data_prep/eda/multivariate/heatmap.py,,missing
+PCA projection (проекция PCA),analysis/eda/multivariate,eda,0,0,0,0,0,0,pca_projection,src/data_prep/eda/multivariate/pca_projection.py,,missing
+Missing report (отчёт о пропусках),analysis/preprocessing/missing,preprocessing,0,0,0,0,0,0,missing_report,src/data_prep/preprocessing/missing/detection/missing_report.py,,missing
+Missing pattern (структура пропусков),analysis/preprocessing/missing,preprocessing,0,0,0,0,0,0,missing_pattern,src/data_prep/preprocessing/missing/detection/missing_pattern.py,,missing
+Drop (удаление),analysis/preprocessing/missing,preprocessing,0,0,0,0,0,0,drop,src/data_prep/preprocessing/missing/imputation/drop.py,,missing
+Mean / Median / Mode (среднее / медиана / мода),analysis/preprocessing/missing,preprocessing,0,0,0,0,0,0,mean_median_mode,src/data_prep/preprocessing/missing/imputation/mean_median_mode.py,,missing
+Constant (константа),analysis/preprocessing/missing,preprocessing,0,0,0,0,0,0,constant,src/data_prep/preprocessing/missing/imputation/constant.py,,missing
+Forward / Backward fill (заполнение соседним),analysis/preprocessing/missing,preprocessing,0,0,0,0,0,0,,,,
+Interpolation (интерполяция),analysis/preprocessing/missing,preprocessing,0,0,0,0,0,0,interpolation,src/data_prep/preprocessing/missing/imputation/interpolation.py,,missing
+KNN Imputer (заполнение по соседям),analysis/preprocessing/missing,preprocessing,0,0,0,0,0,0,knn_imputer,src/data_prep/preprocessing/missing/imputation/knn_imputer.py,,missing
+"Iterative Imputer, MICE (итеративное заполнение)",analysis/preprocessing/missing,preprocessing,0,0,0,0,0,0,iterative_imputer,src/data_prep/preprocessing/missing/imputation/iterative_imputer.py,,missing
+Missing Indicator (индикатор пропуска),analysis/preprocessing/missing,preprocessing,0,0,0,0,0,0,missing_indicator,src/data_prep/preprocessing/missing/imputation/missing_indicator.py,,missing
+IQR (межквартильный размах),analysis/preprocessing/outliers,preprocessing,0,0,0,0,0,0,iqr,src/data_prep/preprocessing/outliers/detection/iqr.py,,missing
+Z-score (стандартизованное отклонение),analysis/preprocessing/outliers,preprocessing,0,0,0,0,0,0,z_score,src/data_prep/preprocessing/outliers/detection/z_score.py,,missing
+Modified Z-score (модифицированный Z),analysis/preprocessing/outliers,preprocessing,0,0,0,0,0,0,modified_z_score,src/data_prep/preprocessing/outliers/detection/modified_z_score.py,,missing
+Isolation Forest (изолирующий лес),analysis/preprocessing/outliers,preprocessing,0,0,0,0,0,0,isolation_forest,src/data_prep/preprocessing/outliers/detection/isolation_forest.py,,missing
+LOF (локальный фактор выброса),analysis/preprocessing/outliers,preprocessing,0,0,0,0,0,0,lof,src/data_prep/preprocessing/outliers/detection/lof.py,,missing
+DBSCAN (кластеризация по плотности),analysis/preprocessing/outliers,preprocessing,0,0,0,0,0,0,dbscan,src/data_prep/preprocessing/outliers/detection/dbscan.py,,missing
+Remove (удаление),analysis/preprocessing/outliers,preprocessing,0,0,0,0,0,0,remove,src/data_prep/preprocessing/outliers/treatment/remove.py,,missing
+Clip / Winsorizing (обрезка),analysis/preprocessing/outliers,preprocessing,0,0,0,0,0,0,clip,src/data_prep/preprocessing/outliers/treatment/clip.py,,missing
+Log transform (логарифм),analysis/preprocessing/outliers,preprocessing,0,0,0,0,0,0,log_transform,src/data_prep/preprocessing/outliers/treatment/log_transform.py,,missing
+Impute (замена как пропуск),analysis/preprocessing/outliers,preprocessing,0,0,0,0,0,0,impute,src/data_prep/preprocessing/outliers/treatment/impute.py,,missing
+Flag (пометка),analysis/preprocessing/outliers,preprocessing,0,0,0,0,0,0,flag,src/data_prep/preprocessing/outliers/treatment/flag.py,,missing
+One-Hot (прямое кодирование),analysis/preprocessing/encoding,preprocessing,0,0,0,0,0,0,one_hot,src/data_prep/preprocessing/encoding/one_hot.py,,missing
+Label (меточное),analysis/preprocessing/encoding,preprocessing,0,0,0,0,0,0,label,src/data_prep/preprocessing/encoding/label.py,,missing
+Ordinal (порядковое),analysis/preprocessing/encoding,preprocessing,0,0,0,0,0,0,ordinal,src/data_prep/preprocessing/encoding/ordinal.py,,missing
+Target (по целевой переменной),analysis/preprocessing/encoding,preprocessing,0,0,0,0,0,0,target,src/data_prep/preprocessing/encoding/target.py,,missing
+Frequency (частотное),analysis/preprocessing/encoding,preprocessing,0,0,0,0,0,0,frequency,src/data_prep/preprocessing/encoding/frequency.py,,missing
+Binary (двоичное),analysis/preprocessing/encoding,preprocessing,0,0,0,0,0,0,binary,src/data_prep/preprocessing/encoding/binary.py,,missing
+Hashing (хеширование),analysis/preprocessing/encoding,preprocessing,0,0,0,0,0,0,hashing,src/data_prep/preprocessing/encoding/hashing.py,,missing
+StandardScaler (стандартизация),analysis/preprocessing/scaling,preprocessing,0,0,0,0,0,0,standard,src/data_prep/preprocessing/scaling/standard.py,,missing
+MinMaxScaler (минимакс),analysis/preprocessing/scaling,preprocessing,0,0,0,0,0,0,minmax,src/data_prep/preprocessing/scaling/minmax.py,,missing
+RobustScaler (устойчивое масштабирование),analysis/preprocessing/scaling,preprocessing,0,0,0,0,0,0,robust,src/data_prep/preprocessing/scaling/robust.py,,missing
+MaxAbsScaler (по максимуму модуля),analysis/preprocessing/scaling,preprocessing,0,0,0,0,0,0,maxabs,src/data_prep/preprocessing/scaling/maxabs.py,,missing
+Normalizer (нормализация строк),analysis/preprocessing/scaling,preprocessing,0,0,0,0,0,0,normalizer,src/data_prep/preprocessing/scaling/normalizer.py,,missing
+Log (логарифм),analysis/preprocessing/transformation,preprocessing,0,0,0,0,0,0,log,src/data_prep/preprocessing/transformation/log.py,,missing
+Box-Cox (преобразование Бокса–Кокса),analysis/preprocessing/transformation,preprocessing,0,0,0,0,0,0,box_cox,src/data_prep/preprocessing/transformation/box_cox.py,,missing
+Yeo-Johnson (преобразование Йео–Джонсона),analysis/preprocessing/transformation,preprocessing,0,0,0,0,0,0,yeo_johnson,src/data_prep/preprocessing/transformation/yeo_johnson.py,,missing
+Quantile (квантильное),analysis/preprocessing/transformation,preprocessing,0,0,0,0,0,0,quantile,src/data_prep/preprocessing/transformation/quantile.py,,missing
+Polynomial (полиномиальные),analysis/preprocessing/feature_engineering,preprocessing,0,0,0,0,0,0,polynomial,src/data_prep/preprocessing/feature_engineering/polynomial.py,,missing
+Interactions (взаимодействия),analysis/preprocessing/feature_engineering,preprocessing,0,0,0,0,0,0,interactions,src/data_prep/preprocessing/feature_engineering/interactions.py,,missing
+Binning (разбиение на интервалы),analysis/preprocessing/feature_engineering,preprocessing,0,0,0,0,0,0,binning,src/data_prep/preprocessing/feature_engineering/binning.py,,missing
+Datetime features (признаки из даты),analysis/preprocessing/feature_engineering,preprocessing,0,0,0,0,0,0,datetime_features,src/data_prep/preprocessing/feature_engineering/datetime_features.py,,missing
+Aggregations (агрегаты),analysis/preprocessing/feature_engineering,preprocessing,0,0,0,0,0,0,aggregations,src/data_prep/preprocessing/feature_engineering/aggregations.py,,missing
+Variance Threshold (порог дисперсии),analysis/preprocessing/feature_selection,preprocessing,0,0,0,0,0,0,variance_threshold,src/data_prep/preprocessing/feature_selection/filter/variance_threshold.py,,missing
+Correlation (корреляция),analysis/preprocessing/feature_selection,preprocessing,0,0,0,0,0,0,correlation,src/data_prep/preprocessing/feature_selection/filter/correlation.py,,missing
+Chi² (хи-квадрат),analysis/preprocessing/feature_selection,preprocessing,0,0,0,0,0,0,chi2,src/data_prep/preprocessing/feature_selection/filter/chi2.py,,missing
+Mutual Information (взаимная информация),analysis/preprocessing/feature_selection,preprocessing,0,0,0,0,0,0,mutual_information,src/data_prep/preprocessing/feature_selection/filter/mutual_information.py,,missing
+RFE (рекурсивное исключение признаков),analysis/preprocessing/feature_selection,preprocessing,0,0,0,0,0,0,rfe,src/data_prep/preprocessing/feature_selection/wrapper/rfe.py,,missing
+Forward Selection (прямой отбор),analysis/preprocessing/feature_selection,preprocessing,0,0,0,0,0,0,forward_selection,src/data_prep/preprocessing/feature_selection/wrapper/forward_selection.py,,missing
+Backward Elimination (обратное исключение),analysis/preprocessing/feature_selection,preprocessing,0,0,0,0,0,0,backward_elimination,src/data_prep/preprocessing/feature_selection/wrapper/backward_elimination.py,,missing
+Lasso (L1-регуляризация),analysis/preprocessing/feature_selection,preprocessing,0,0,0,0,0,0,lasso,src/data_prep/preprocessing/feature_selection/embedded/lasso.py,,missing
+Tree Importance (важность по дереву),analysis/preprocessing/feature_selection,preprocessing,0,0,0,0,0,0,tree_importance,src/data_prep/preprocessing/feature_selection/embedded/tree_importance.py,,missing
+Holdout (отложенная выборка),analysis/preprocessing/splitting,preprocessing,0,0,0,0,0,0,holdout,src/data_prep/preprocessing/splitting/holdout.py,,missing
+Stratified (стратифицированное),analysis/preprocessing/splitting,preprocessing,0,0,0,0,0,0,stratified,src/data_prep/preprocessing/splitting/stratified.py,,missing
+K-Fold (k-кратная кросс-валидация),analysis/preprocessing/splitting,preprocessing,0,0,0,0,0,0,kfold,src/data_prep/preprocessing/splitting/kfold.py,,missing
+Stratified K-Fold (стратифицированная k-кратная),analysis/preprocessing/splitting,preprocessing,0,0,0,0,0,0,stratified_kfold,src/data_prep/preprocessing/splitting/stratified_kfold.py,,missing
+Group K-Fold (k-кратная по группам),analysis/preprocessing/splitting,preprocessing,0,0,0,0,0,0,group_kfold,src/data_prep/preprocessing/splitting/group_kfold.py,,missing
+Time Series Split (разбиение по времени),analysis/preprocessing/splitting,preprocessing,0,0,0,0,0,0,time_series_split,src/data_prep/preprocessing/splitting/time_series_split.py,,missing
+Leave-One-Out (исключение по одному),analysis/preprocessing/splitting,preprocessing,0,0,0,0,0,0,leave_one_out,src/data_prep/preprocessing/splitting/leave_one_out.py,,missing
+Random Oversampling (случайное дублирование),analysis/preprocessing/imbalance,preprocessing,0,0,0,0,0,0,random_oversampling,src/data_prep/preprocessing/imbalance/oversampling/random_oversampling.py,,missing
+SMOTE (синтетическое дополнение),analysis/preprocessing/imbalance,preprocessing,0,0,0,0,0,0,smote,src/data_prep/preprocessing/imbalance/oversampling/smote.py,,missing
+ADASYN (адаптивное синтетическое),analysis/preprocessing/imbalance,preprocessing,0,0,0,0,0,0,adasyn,src/data_prep/preprocessing/imbalance/oversampling/adasyn.py,,missing
+Random Undersampling (случайное удаление),analysis/preprocessing/imbalance,preprocessing,0,0,0,0,0,0,random_undersampling,src/data_prep/preprocessing/imbalance/undersampling/random_undersampling.py,,missing
+Tomek Links (связи Томека),analysis/preprocessing/imbalance,preprocessing,0,0,0,0,0,0,tomek_links,src/data_prep/preprocessing/imbalance/undersampling/tomek_links.py,,missing
+Class Weights (веса классов),analysis/preprocessing/imbalance,preprocessing,0,0,0,0,0,0,class_weights,src/data_prep/preprocessing/imbalance/class_weights.py,,missing
+Identity / Linear (тождественная),activations/output,activation,0,0,0,0,0,0,identity,src/activations/output/identity.py,,missing
+Sigmoid (сигмоида),activations/output,activation,0.5,0,0,0,1,0,sigmoid,src/activations/output/sigmoid.py,,missing
+Softmax (софтмакс),activations/output,activation,0,0,0,0,0,0,softmax,src/activations/output/softmax.py,,missing
+Tanh (гиперболический тангенс),activations/output,activation,0,0,0,0,0,0,tanh,src/activations/output/tanh.py,,missing
+Sigmoid (сигмоида),activations/hidden/saturating,activation,0,0,0,0,1,0,sigmoid,src/activations/hidden/saturating/sigmoid.py,,missing
+Tanh (гиперболический тангенс),activations/hidden/saturating,activation,0,0,0,0,0,0,tanh,src/activations/hidden/saturating/tanh.py,,missing
+ReLU (выпрямитель),activations/hidden/relu_family,activation,0,0,0,0,0,0,relu,src/activations/hidden/relu_family/relu.py,,missing
+Leaky ReLU (протекающий ReLU),activations/hidden/relu_family,activation,0,0,0,0,0,0,leaky_relu,src/activations/hidden/relu_family/leaky_relu.py,,missing
+PReLU (параметрический ReLU),activations/hidden/relu_family,activation,0,0,0,0,0,0,prelu,src/activations/hidden/relu_family/prelu.py,,missing
+ELU (экспоненциальный линейный),activations/hidden/relu_family,activation,0,0,0,0,0,0,elu,src/activations/hidden/relu_family/elu.py,,missing
+SELU (масштабированный ELU),activations/hidden/relu_family,activation,0,0,0,0,0,0,selu,src/activations/hidden/relu_family/selu.py,,missing
+GELU (гауссов линейный),activations/hidden/smooth,activation,0,0,0,0,0,0,gelu,src/activations/hidden/smooth/gelu.py,,missing
+Swish / SiLU (свиш),activations/hidden/smooth,activation,0,0,0,0,0,0,swish,src/activations/hidden/smooth/swish.py,,missing
+Mish (миш),activations/hidden/smooth,activation,0,0,0,0,0,0,mish,src/activations/hidden/smooth/mish.py,,missing
+Softplus (мягкий плюс),activations/hidden/smooth,activation,0,0,0,0,0,0,softplus,src/activations/hidden/smooth/softplus.py,,missing
+"MSE, Mean Squared Error (среднеквадратичная ошибка)",losses/regression,loss,0,0,0,0,0,0,mse,src/losses/regression/mse.py,,missing
+"MAE, Mean Absolute Error (средняя абсолютная ошибка)",losses/regression,loss,0,0,0,0,0,0,mae,src/losses/regression/mae.py,,missing
+Huber Loss (функция Хьюбера),losses/regression,loss,0,0,0,0,0,0,huber,src/losses/regression/huber.py,,missing
+RMSE (корень из MSE),losses/regression,loss,0,0,0,0,0,0,rmse,src/losses/regression/rmse.py,,missing
+Quantile Loss (квантильная функция потерь),losses/regression,loss,0,0,0,0,0,0,quantile,src/losses/regression/quantile.py,,missing
+MAPE (средняя абсолютная процентная ошибка),losses/regression,loss,0,0,0,0,0,0,mape,src/losses/regression/mape.py,,missing
+Log Loss / Binary Cross-Entropy (бинарная кросс-энтропия),losses/classification,loss,0.5,0,0,0,1,0,log_loss,src/losses/classification/log_loss.py,,missing
+Categorical Cross-Entropy (категориальная кросс-энтропия),losses/classification,loss,0,0,0,0,0,0,cross_entropy,src/losses/classification/cross_entropy.py,,missing
+Hinge Loss (кусочно-линейная функция потерь),losses/classification,loss,0,0,0,0,0,0,hinge,src/losses/classification/hinge.py,,missing
+Focal Loss (фокальная функция потерь),losses/classification,loss,0,0,0,0,0,0,focal,src/losses/classification/focal.py,,missing
+Weighted Cross-Entropy (взвешенная кросс-энтропия),losses/classification,loss,0,0,0,0,0,0,weighted_cross_entropy,src/losses/classification/weighted_cross_entropy.py,,missing
+Gini / Entropy (критерий Джини / энтропия),losses/classification,loss,0,0,0,0,0,0,gini_entropy,src/losses/classification/gini_entropy.py,,missing
+Pairwise Loss (попарная функция потерь),losses/metric_learning,loss,0,0,0,0,0,0,pairwise,src/losses/metric_learning/pairwise.py,,missing
+Contrastive Loss (контрастивная функция потерь),losses/metric_learning,loss,0,0,0,0,0,0,contrastive,src/losses/metric_learning/contrastive.py,,missing
+Triplet Loss (тройная функция потерь),losses/metric_learning,loss,0,0,0,0,0,0,triplet,src/losses/metric_learning/triplet.py,,missing
+ArcFace / CosFace (угловые функции потерь),losses/metric_learning,loss,0,0,0,0,0,0,arcface,src/losses/metric_learning/arcface.py,,missing
+InfoNCE (контрастивная функция для многих негативов),losses/metric_learning,loss,0,0,0,0,0,0,info_nce,src/losses/metric_learning/info_nce.py,,missing
+Dice Loss (функция потерь Дайса),losses/segmentation,loss,0,0,0,0,0,0,dice,src/losses/segmentation/dice.py,,missing
+IoU / Jaccard Loss (функция Жаккара),losses/segmentation,loss,0,0,0,0,0,0,iou,src/losses/segmentation/iou.py,,missing
+Reconstruction Loss (ошибка восстановления),losses/generative,loss,0,0,0,0,0,0,reconstruction,src/losses/generative/reconstruction.py,,missing
+KL Divergence (расхождение Кульбака–Лейблера),losses/generative,loss,0,0,0,0,0,0,kl_divergence,src/losses/generative/kl_divergence.py,,missing
+Adversarial Loss (состязательная функция потерь),losses/generative,loss,0,0,0,0,0,0,adversarial,src/losses/generative/adversarial.py,,missing
+Diffusion Loss (функция потерь диффузии),losses/generative,loss,0,0,0,0,0,0,diffusion,src/losses/generative/diffusion.py,,missing
+CTC Loss (Connectionist Temporal Classification),losses/audio,loss,0,0,0,0,0,0,ctc,src/losses/audio/ctc.py,,missing
+Mel-spectrogram Loss (ошибка по мел-спектрограмме),losses/audio,loss,0,0,0,0,0,0,mel_spectrogram,src/losses/audio/mel_spectrogram.py,,missing
+Batch GD (полный градиентный спуск),optimizers/gradient_descent,optimizer,0.5,0,0,0,1,0,batch_gd,src/optimizers/gradient_descent/batch_gd.py,,missing
+SGD (стохастический градиентный спуск),optimizers/gradient_descent,optimizer,0,0,0,0,0,0,sgd,src/optimizers/gradient_descent/sgd.py,,missing
+Mini-batch GD (спуск по мини-батчам),optimizers/gradient_descent,optimizer,0,0,0,0,0,0,minibatch_gd,src/optimizers/gradient_descent/minibatch_gd.py,,missing
+Momentum (импульс),optimizers/momentum,optimizer,0,0,0,0,0,0,momentum,src/optimizers/momentum/momentum.py,,missing
+"Nesterov, NAG (ускоренный градиент Нестерова)",optimizers/momentum,optimizer,0,0,0,0,0,0,nesterov,src/optimizers/momentum/nesterov.py,,missing
+Adagrad (адаптивный градиент),optimizers/adaptive,optimizer,0,0,0,0,0,0,adagrad,src/optimizers/adaptive/adagrad.py,,missing
+RMSprop (среднеквадратичное распространение),optimizers/adaptive,optimizer,0,0,0,0,0,0,rmsprop,src/optimizers/adaptive/rmsprop.py,,missing
+Adadelta (ададельта),optimizers/adaptive,optimizer,0,0,0,0,0,0,adadelta,src/optimizers/adaptive/adadelta.py,,missing
+Adam (адаптивная оценка моментов),optimizers/adam_family,optimizer,0,0,0,0,0,0,adam,src/optimizers/adam_family/adam.py,,missing
+AdamW (Adam с раздельным затуханием весов),optimizers/adam_family,optimizer,0,0,0,0,0,0,adamw,src/optimizers/adam_family/adamw.py,,missing
+Nadam (Adam с Нестеровым),optimizers/adam_family,optimizer,0,0,0,0,0,0,nadam,src/optimizers/adam_family/nadam.py,,missing
+AdaMax (адамакс),optimizers/adam_family,optimizer,0,0,0,0,0,0,adamax,src/optimizers/adam_family/adamax.py,,missing
+AMSGrad (амсград),optimizers/adam_family,optimizer,0,0,0,0,0,0,amsgrad,src/optimizers/adam_family/amsgrad.py,,missing
+RAdam (выпрямленный Adam),optimizers/adam_family,optimizer,0,0,0,0,0,0,radam,src/optimizers/adam_family/radam.py,,missing
+LAMB (послойный адаптивный),optimizers/large_scale,optimizer,0,0,0,0,0,0,lamb,src/optimizers/large_scale/lamb.py,,missing
+Adafactor (адафактор),optimizers/large_scale,optimizer,0,0,0,0,0,0,adafactor,src/optimizers/large_scale/adafactor.py,,missing
+Lion (лайон),optimizers/large_scale,optimizer,0,0,0,0,0,0,lion,src/optimizers/large_scale/lion.py,,missing
+Newton's method (метод Ньютона),optimizers/second_order,optimizer,0,0,0,0,0,0,newton,src/optimizers/second_order/newton.py,,missing
+L-BFGS (квазиньютоновский с ограниченной памятью),optimizers/second_order,optimizer,0,0,0,0,0,0,lbfgs,src/optimizers/second_order/lbfgs.py,,missing
+Step Decay (ступенчатое уменьшение),optimizers/schedulers,optimizer,0,0,0,0,0,0,step_decay,src/optimizers/schedulers/step_decay.py,,missing
+Exponential Decay (экспоненциальное уменьшение),optimizers/schedulers,optimizer,0,0,0,0,0,0,exponential_decay,src/optimizers/schedulers/exponential_decay.py,,missing
+Cosine Annealing (косинусный отжиг),optimizers/schedulers,optimizer,0,0,0,0,0,0,cosine_annealing,src/optimizers/schedulers/cosine_annealing.py,,missing
+Warmup (разогрев),optimizers/schedulers,optimizer,0,0,0,0,0,0,warmup,src/optimizers/schedulers/warmup.py,,missing
+Reduce on Plateau (снижение на плато),optimizers/schedulers,optimizer,0,0,0,0,0,0,reduce_on_plateau,src/optimizers/schedulers/reduce_on_plateau.py,,missing
+MAE (средняя абсолютная ошибка),metrics/regression,metrics,0,0,0,0,0,0,mae,src/metrics/regression/mae.py,,missing
+MSE (среднеквадратичная ошибка),metrics/regression,metrics,0,0,0,0,0,0,mse,src/metrics/regression/mse.py,,missing
+RMSE (корень из MSE),metrics/regression,metrics,0,0,0,0,0,0,rmse,src/metrics/regression/rmse.py,,missing
+R² (коэффициент детерминации),metrics/regression,metrics,0,0,0,0,0,0,r2,src/metrics/regression/r2.py,,missing
+MAPE (средняя процентная ошибка),metrics/regression,metrics,0,0,0,0,0,0,mape,src/metrics/regression/mape.py,,missing
+Accuracy (доля правильных),metrics/classification,metrics,0,0,0,0,0,0,accuracy,src/metrics/classification/accuracy.py,,missing
+Precision (точность),metrics/classification,metrics,0,0,0,0,0,0,precision,src/metrics/classification/precision.py,,missing
+Recall (полнота),metrics/classification,metrics,0,0,0,0,0,0,recall,src/metrics/classification/recall.py,,missing
+F1-score (F1-мера),metrics/classification,metrics,0,0,0,0,0,0,f1,src/metrics/classification/f1.py,,missing
+Specificity (специфичность),metrics/classification,metrics,0,0,0,0,0,0,specificity,src/metrics/classification/specificity.py,,missing
+Balanced Accuracy (сбалансированная доля правильных),metrics/classification,metrics,0,0,0,0,0,0,balanced_accuracy,src/metrics/classification/balanced_accuracy.py,,missing
+MCC (коэффициент корреляции Мэтьюса),metrics/classification,metrics,0,0,0,0,0,0,mcc,src/metrics/classification/mcc.py,,missing
+ROC-AUC (площадь под ROC-кривой),metrics/classification,metrics,0,0,0,0,0,0,roc_auc,src/metrics/classification/roc_auc.py,,missing
+PR-AUC (площадь под кривой точность–полнота),metrics/classification,metrics,0,0,0,0,0,0,pr_auc,src/metrics/classification/pr_auc.py,,missing
+Precision@K (точность в топ-K),metrics/ranking,metrics,0,0,0,0,0,0,precision_at_k,src/metrics/ranking/precision_at_k.py,,missing
+Recall@K (полнота в топ-K),metrics/ranking,metrics,0,0,0,0,0,0,recall_at_k,src/metrics/ranking/recall_at_k.py,,missing
+MAP (средняя точность),metrics/ranking,metrics,0,0,0,0,0,0,map,src/metrics/ranking/map.py,,missing
+MRR (средний обратный ранг),metrics/ranking,metrics,0,0,0,0,0,0,mrr,src/metrics/ranking/mrr.py,,missing
+NDCG (нормализованный дисконтированный выигрыш),metrics/ranking,metrics,0,0,0,0,0,0,ndcg,src/metrics/ranking/ndcg.py,,missing
+Silhouette (силуэт),metrics/clustering,metrics,0,0,0,0,0,0,silhouette,src/metrics/clustering/silhouette.py,,missing
+Davies–Bouldin (индекс Дэвиса–Болдина),metrics/clustering,metrics,0,0,0,0,0,0,davies_bouldin,src/metrics/clustering/davies_bouldin.py,,missing
+Calinski–Harabasz (индекс Калински–Харабаза),metrics/clustering,metrics,0,0,0,0,0,0,calinski_harabasz,src/metrics/clustering/calinski_harabasz.py,,missing
+ARI (скорректированный индекс Рэнда),metrics/clustering,metrics,0,0,0,0,0,0,ari,src/metrics/clustering/ari.py,,missing
+NMI (нормализованная взаимная информация),metrics/clustering,metrics,0,0,0,0,0,0,nmi,src/metrics/clustering/nmi.py,,missing
+IoU (пересечение над объединением),metrics/vision,metrics,0,0,0,0,0,0,iou,src/metrics/vision/iou.py,,missing
+Dice (коэффициент Дайса),metrics/vision,metrics,0,0,0,0,0,0,dice,src/metrics/vision/dice.py,,missing
+mAP (средняя точность для детекции),metrics/vision,metrics,0,0,0,0,0,0,map_detection,src/metrics/vision/map_detection.py,,missing
+Perplexity (перплексия),metrics/generative,metrics,0,0,0,0,0,0,perplexity,src/metrics/generative/perplexity.py,,missing
+BLEU (блю),metrics/generative,metrics,0,0,0,0,0,0,bleu,src/metrics/generative/bleu.py,,missing
+ROUGE (руж),metrics/generative,metrics,0,0,0,0,0,0,rouge,src/metrics/generative/rouge.py,,missing
+FID (расстояние Фреше),metrics/generative,metrics,0,0,0,0,0,0,fid,src/metrics/generative/fid.py,,missing
+WER (доля ошибок по словам),metrics/audio,metrics,0,0,0,0,0,0,wer,src/metrics/audio/wer.py,,missing
+CER (доля ошибок по символам),metrics/audio,metrics,0,0,0,0,0,0,cer,src/metrics/audio/cer.py,,missing
+MOS (средняя оценка мнения),metrics/audio,metrics,0,0,0,0,0,0,mos,src/metrics/audio/mos.py,,missing
+ffill_bfill,analysis/preprocessing/missing,preprocessing,0,0,0,0,0,0,ffill_bfill,src/data_prep/preprocessing/missing/imputation/ffill_bfill.py,,missing
+confusion_matrix,metrics/classification,metrics,0,0,0,0,0,0,confusion_matrix,src/metrics/classification/confusion_matrix.py,,missing
+arcface,model/deep_learning/face_recognition,model,0,0,0,0,0,0,arcface,src/model/deep_learning/face_recognition/arcface/arcface.py,,ok
+facenet,model/deep_learning/face_recognition,model,0,0,0,0,0,0,facenet,src/model/deep_learning/face_recognition/facenet/facenet.py,,ok
+diffusion,model/deep_learning/generative,model,0,0,0,0,0,0,diffusion,src/model/deep_learning/generative/diffusion/diffusion.py,,ok
+gan,model/deep_learning/generative,model,0,0,0,0,0,0,gan,src/model/deep_learning/generative/gan/gan.py,,ok
+vae,model/deep_learning/generative,model,0,0,0,0,0,0,vae,src/model/deep_learning/generative/vae/vae.py,,ok
+efficientnet,model/deep_learning/image_classification,model,0,0,0,0,0,0,efficientnet,src/model/deep_learning/image_classification/efficientnet/efficientnet.py,,ok
+resnet,model/deep_learning/image_classification,model,0,0,0,0,0,0,resnet,src/model/deep_learning/image_classification/resnet/resnet.py,,ok
+vit,model/deep_learning/image_classification,model,0,0,0,0,0,0,vit,src/model/deep_learning/image_classification/vit/vit.py,,ok
+detr,model/deep_learning/object_detection,model,0,0,0,0,0,0,detr,src/model/deep_learning/object_detection/detr/detr.py,,ok
+faster_rcnn,model/deep_learning/object_detection,model,0,0,0,0,0,0,faster_rcnn,src/model/deep_learning/object_detection/faster_rcnn/faster_rcnn.py,,ok
+yolo,model/deep_learning/object_detection,model,0,0,0,0,0,0,yolo,src/model/deep_learning/object_detection/yolo/yolo.py,,ok
+collaborative_filtering,model/deep_learning/recommender,model,0,0,0,0,0,0,collaborative_filtering,src/model/deep_learning/recommender/collaborative_filtering/collaborative_filtering.py,,ok
+matrix_factorization,model/deep_learning/recommender,model,0,0,0,0,0,0,matrix_factorization,src/model/deep_learning/recommender/matrix_factorization/matrix_factorization.py,,ok
+two_tower,model/deep_learning/recommender,model,0,0,0,0,0,0,two_tower,src/model/deep_learning/recommender/two_tower/two_tower.py,,ok
+deeplab,model/deep_learning/segmentation,model,0,0,0,0,0,0,deeplab,src/model/deep_learning/segmentation/deeplab/deeplab.py,,ok
+mask_rcnn,model/deep_learning/segmentation,model,0,0,0,0,0,0,mask_rcnn,src/model/deep_learning/segmentation/mask_rcnn/mask_rcnn.py,,ok
+unet,model/deep_learning/segmentation,model,0,0,0,0,0,0,unet,src/model/deep_learning/segmentation/unet/unet.py,,ok
+encoder_decoder,model/deep_learning/seq2seq,model,0,0,0,0,0,0,encoder_decoder,src/model/deep_learning/seq2seq/encoder_decoder/encoder_decoder.py,,ok
+transformer,model/deep_learning/seq2seq,model,0,0,0,0,0,0,transformer,src/model/deep_learning/seq2seq/transformer/transformer.py,,ok
+ctc_lstm,model/deep_learning/speech_recognition,model,0,0,0,0,0,0,ctc_lstm,src/model/deep_learning/speech_recognition/ctc_lstm/ctc_lstm.py,,ok
+whisper,model/deep_learning/speech_recognition,model,0,0,0,0,0,0,whisper,src/model/deep_learning/speech_recognition/whisper/whisper.py,,ok
+bert,model/deep_learning/text_classification,model,0,0,0,0,0,0,bert,src/model/deep_learning/text_classification/bert/bert.py,,ok
+lstm,model/deep_learning/text_classification,model,0,0,0,0,0,0,lstm,src/model/deep_learning/text_classification/lstm/lstm.py,,ok
+fastspeech,model/deep_learning/text_to_speech,model,0,0,0,0,0,0,fastspeech,src/model/deep_learning/text_to_speech/fastspeech/fastspeech.py,,ok
+hifigan,model/deep_learning/text_to_speech,model,0,0,0,0,0,0,hifigan,src/model/deep_learning/text_to_speech/hifigan/hifigan.py,,ok
+tacotron2,model/deep_learning/text_to_speech,model,0,0,0,0,0,0,tacotron2,src/model/deep_learning/text_to_speech/tacotron2/tacotron2.py,,ok
+vits,model/deep_learning/text_to_speech,model,0,0,0,0,0,0,vits,src/model/deep_learning/text_to_speech/vits/vits.py,,ok
+arima,model/deep_learning/time_series,model,0,0,0,0,0,0,arima,src/model/deep_learning/time_series/arima/arima.py,,ok
+lstm,model/deep_learning/time_series,model,0,0,0,0,0,0,lstm,src/model/deep_learning/time_series/lstm/lstm.py,,ok
+prophet,model/deep_learning/time_series,model,0,0,0,0,0,0,prophet,src/model/deep_learning/time_series/prophet/prophet.py,,ok
+knn,model/supervised/classification,model,0,0,0,0,0,0,knn,src/model/supervised/classification/knn/knn.py,,ok
+knn,model/supervised/regression,model,0,0,0,0,0,0,knn,src/model/supervised/regression/knn/knn.py,,ok
+lasso,model/supervised/regression,model,0,0,0,0,0,0,lasso,src/model/supervised/regression/lasso/lasso.py,,ok
+ridge,model/supervised/regression,model,0,0,0,0,0,0,ridge,src/model/supervised/regression/ridge/ridge.py,,ok
+dbscan,model/unsupervised/clustering,model,0,0,0,0,0,0,dbscan,src/model/unsupervised/clustering/dbscan/dbscan.py,,ok
+kmeans,model/unsupervised/clustering,model,0,0,0,0,0,0,kmeans,src/model/unsupervised/clustering/kmeans/kmeans.py,,ok
+spectral,model/unsupervised/clustering,model,0,0,0,0,0,0,spectral,src/model/unsupervised/clustering/spectral/spectral.py,,ok
+tsne,model/unsupervised/dimensionality_reduction,model,0,0,0,0,0,0,tsne,src/model/unsupervised/dimensionality_reduction/tsne/tsne.py,,ok
