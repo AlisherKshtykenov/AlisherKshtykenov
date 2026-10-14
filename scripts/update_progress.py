@@ -1,13 +1,17 @@
-"""Собирает трекер ROADMAP-ML из архитектуры src/, рисует картинку прогресса, пишет историю и README-отчёт.
+"""Собирает трекер ROADMAP-ML из архитектуры src/: таблица, карта прогресса, радар, история и README-визитка.
 
-Запуск из корня репозитория:  python scripts/update_progress.py [--pytest]
+Запуск из корня репозитория:  python scripts/update_progress.py [--skip-tests]
 Структура: src/<этап>/<подраздел>/<метод>.py  или  src/<этап>/<подраздел>/<метод>/<метод>.py
+Повтор = файл attempts/<slug>_attempt_NN.py, прошедший тест tests/**/test_<slug>.py.
 """
 import argparse
+import re
 import subprocess
 import sys
+import tempfile
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -20,17 +24,24 @@ from matplotlib.colors import LinearSegmentedColormap, to_rgb
 
 ROOT = Path(__file__).resolve().parents[1]                     # корень репо (скрипт лежит в scripts/)
 ORDER = ["eda", "preprocessing", "model", "activations", "losses", "optimizers", "metrics"]   # этапы = папки src/
-FULL = 4                                                       # сколько повторений = 100% «осело»
+FULL = 10                                                      # 10 засчитанных повторений = 100% цвета
 CMAP = LinearSegmentedColormap.from_list(                      # плавная шкала: серый → тёмно-зелёный
     "progress", ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"])
 LABEL_TOP, TITLE_Y = -0.35, -8.6                               # где подписи разделов и названия этапов (над кубиками)
 
 COLUMNS = ["stage", "subsection", "slug", "path", "description", "status", "learned",
-           "repeated", "readme", "experiment", "test_create", "test_run"]
-MANUAL = ["repeated", "test_run"]                              # ручные поля: при пересборке переносятся по path
+           "repeated", "last_repeat", "score", "readme", "experiment", "test_create", "test_run"]
+FROM_TESTS = ["repeated", "last_repeat", "score", "test_run"]   # считаются прогоном тестов; с --skip-tests — из старой таблицы
 LEARNED = {"todo": 0, "in_progress": 0.5, "ready": 1, "готов": 1, "done": 1}   # статус → learned
+TASKS = ["learned", "readme", "experiment", "test"]            # четыре задачи по теме
+REQUIRED = {"model": ["learned", "readme", "experiment", "test"],               # обязательные задачи этапа
+            "eda": ["learned", "readme", "experiment"],                         # эксперимент = применено в ноутбуке
+            "preprocessing": ["learned", "readme", "experiment"],
+            "activations": ["learned", "readme", "test"], "losses": ["learned", "readme", "test"],
+            "optimizers": ["learned", "readme", "test"], "metrics": ["learned", "readme", "test"]}
 SKIP_DIRS = {"attempts", "__pycache__"}                        # черновики и кэш — не методы
 HISTORY_COLS = ["datetime", "всего"] + ORDER                   # progress_history.csv
+IMPL_RE = re.compile(r"""^IMPL\s*=\s*\(\s*["']([^"']+)["']""", re.MULTILINE)   # строка IMPL = ("src/...py", ...) в тесте
 
 BROKEN_COLOR = "#cf222e"                                       # значок «!» (тест сломан) — красный
 MISSING_COLOR = "#8250df"                                      # значок «?» (нет статуса) — фиолетовый
@@ -100,36 +111,142 @@ def readme_has_text(folder):
     return int(any(l and not l.startswith("#") for l in lines))
 
 
+# ───────────────────────────── тесты и повторы ─────────────────────────────
+
+def attempt_files(etalon):
+    """Попытки к эталону: <slug>_attempt_*.py из attempts/ метода → подраздела → этапа (как в tests/conftest.py)."""
+    slug = etalon.stem
+    method_dir = etalon.parent if etalon.parent.name == slug else None   # папка метода есть только у .../<slug>/<slug>.py
+    subsection = etalon.parent.parent if method_dir else etalon.parent
+    found = {}
+    for folder in (method_dir, subsection, subsection.parent):
+        if folder is not None:
+            for path in sorted((folder / "attempts").glob(f"{slug}_attempt_*.py")):
+                found.setdefault(path.name, path)              # одноимённая попытка — берём самую «близкую»
+    return list(found.values())
+
+
+def test_key(root, test):
+    """Чей это тест: путь эталона из строки IMPL, иначе «slug:<этап>:<slug>» по имени и папке теста."""
+    m = IMPL_RE.search(test.read_text(encoding="utf-8", errors="replace"))
+    if m:
+        return m.group(1)
+    parts = test.relative_to(root / "tests").parts
+    return f"slug:{parts[0] if len(parts) > 1 else ''}:{test.stem.removeprefix('test_')}"
+
+
+def find_test(results, m):
+    """Результат теста для метода: по пути эталона, иначе по этапу и slug."""
+    return results.get(m.path) or results.get(f"slug:{m.stage}:{m.slug}") or results.get(f"slug::{m.slug}")
+
+
+def junit_cases(xml):
+    """Из JUnit-отчёта (XML) pytest: [(имя теста, id параметра или None, прошёл ли, пропущен ли)]."""
+    cases = []
+    for tc in ET.parse(xml).iter("testcase"):
+        name = tc.get("name", "")
+        bad = tc.find("failure") is not None or tc.find("error") is not None
+        skipped = tc.find("skipped") is not None
+        pid = re.search(r"\[(.+)\]$", name)                    # test_zero[sigmoid_attempt_01] → sigmoid_attempt_01
+        cases.append((name, pid.group(1) if pid else None, not bad, skipped))
+    return cases
+
+
+def run_tests(root, log, run=True):
+    """Гоняет каждый tests/**/test_*.py отдельно. {ключ эталона: {file, etalon_failed, passed_attempts, failed}}.
+    run=False — только найти тесты, не запуская (для --skip-tests)."""
+    results = {}
+    tests = sorted((root / "tests").rglob("test_*.py")) if (root / "tests").is_dir() else []
+    for test in tests:
+        rel = test.relative_to(root).as_posix()
+        res = {"file": rel, "etalon_failed": False, "passed_attempts": [], "failed": []}
+        results[test_key(root, test)] = res
+        if not run:
+            continue
+        with tempfile.TemporaryDirectory() as tmp:
+            xml = Path(tmp) / "report.xml"
+            proc = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+                                   f"--junitxml={xml}", rel], cwd=root, capture_output=True, text=True, timeout=600)
+            cases = junit_cases(xml) if xml.exists() else []
+        if not cases and proc.returncode not in (0, 5):        # 5 — тестов нет; другое без отчёта — тест не запустился
+            cases = [(rel, None, False, False)]
+        by_id = {}
+        for name, pid, ok, skipped in cases:
+            by_id.setdefault(pid, []).append((ok, skipped))
+            if not ok:
+                res["failed"].append((name, rel))
+        res["etalon_failed"] = any(not ok for pid in (None, "etalon") for ok, _ in by_id.get(pid, []))
+        res["passed_attempts"] = [pid for pid, rs in by_id.items()   # попытка засчитана: все её тесты прошли
+                                  if pid not in (None, "etalon") and all(ok and not sk for ok, sk in rs)]
+        n_attempts = sum(pid not in (None, "etalon") for pid in by_id)
+        log.append(f"{'FAIL ' if res['failed'] else 'INFO '} {rel}: эталон {'упал' if res['etalon_failed'] else 'ок'}, "
+                   f"попыток прошло {len(res['passed_attempts'])} из {n_attempts}")
+    return results
+
+
+def git_date(root, path):
+    """Дата последнего коммита файла из git (не из файловой системы). Не закоммичен — сегодня."""
+    try:
+        out = subprocess.run(["git", "log", "-1", "--format=%cs", "--", str(path)], cwd=root,
+                             capture_output=True, text=True, timeout=30).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        out = ""
+    return date.fromisoformat(out) if out else date.today()
+
+
+def full_months(since, today):
+    """Сколько полных месяцев прошло с даты since до today."""
+    months = (today.year - since.year) * 12 + today.month - since.month
+    return max(0, months - (today.day < since.day))            # месяц не «добит» — не считаем
+
+
+def repeats(root, m, res, today):
+    """Повторы метода: (сколько попыток прошло тест, дата последней, итог со штрафом за простой)."""
+    if not res or not res["passed_attempts"]:
+        return 0, "", 0                                        # нет попыток или ни одна не прошла — серый кубик
+    by_stem = {p.stem: p for p in attempt_files(root / m.path)}
+    paths = [by_stem[s] for s in res["passed_attempts"] if s in by_stem]
+    if not paths:
+        return 0, "", 0
+    last = max(git_date(root, p) for p in paths)
+    score = max(0, len(paths) - full_months(last, today))      # минус 1 за каждый полный месяц без нового повтора
+    return len(paths), last.isoformat(), min(score, FULL)
+
+
 # ───────────────────────────── таблица ─────────────────────────────
 
-def build_table(root, old, log, test_results=None):
-    """Пересобирает таблицу из src/. Ручные поля (repeated, test_run) берёт из старой таблицы по path."""
-    manual = old.set_index("path")[[c for c in MANUAL if c in old.columns]].to_dict("index") \
-        if "path" in old.columns else {}
+def build_table(root, old, log, results, ran_tests=True, today=None):
+    """Пересобирает таблицу из src/. Без прогона тестов повторы и test_run берёт из старой таблицы по path."""
+    today = today or date.today()
+    kept = old.set_index("path")[[c for c in FROM_TESTS if c in old.columns]].to_dict("index") \
+        if "path" in old.columns and len(old) else {}
     order = {p: i for i, p in enumerate(old["path"])} if "path" in old.columns else {}   # прежний порядок строк
-    tests = {p.name for p in (root / "tests").rglob("test_*.py")} if (root / "tests").is_dir() else set()
 
     rows = []
     for m in scan_src(root, log):
         if m.status not in LEARNED:
             log.append(f"WARN  {m.path}: " + (f"неизвестный статус «{m.status}» (ожидается todo / in_progress / ready)"
                                               if m.status else "статус отсутствует (нет строки `# status:` в шапке)"))
-        kept = manual.get(m.path, {})
+        res = find_test(results, m)
+        if ran_tests:
+            repeated, last_repeat, score = repeats(root, m, res, today)
+            test_run = int(bool(res and res["etalon_failed"]))
+        else:
+            k = kept.get(m.path, {})
+            repeated, last_repeat, score, test_run = (k.get(c, d) for c, d in zip(FROM_TESTS, (0, "", 0, 0)))
         exp_dir = root / "experiments" / m.slug
-        test_run = kept.get("test_run", 0) if test_results is None else test_results.get(f"test_{m.slug}.py", 0)
         rows.append({"stage": m.stage, "subsection": m.subsection, "slug": m.slug, "path": m.path,
                      "description": m.description, "status": m.status,
                      "learned": LEARNED.get(m.status, 0),       # learned — только из статуса
-                     "repeated": kept.get("repeated", 0) or 0,
+                     "repeated": repeated, "last_repeat": last_repeat, "score": score,
                      "readme": readme_has_text(m.method_dir),
                      "experiment": int(exp_dir.is_dir() and any(exp_dir.glob("*.ipynb"))),
-                     "test_create": int(f"test_{m.slug}.py" in tests),
-                     "test_run": test_run or 0})
+                     "test_create": int(res is not None),
+                     "test_run": test_run})
     df = pd.DataFrame(rows, columns=COLUMNS).astype(object)
     df["learned"] = [f"{v:g}" for v in df["learned"]]          # 0 / 0.5 / 1, а не 0.0
 
-    gone = set(manual) - set(df["path"])                       # файл удалён → строка пропала (сообщаем)
-    for path in sorted(gone):
+    for path in sorted(set(order) - set(df["path"])):          # файл удалён → строка пропала (сообщаем)
         log.append(f"INFO  {path}: файла больше нет — строка убрана из таблицы")
     for path in df.loc[~df["path"].isin(order.keys()), "path"]:
         log.append(f"INFO  {path}: новая тема в таблице")
@@ -144,32 +261,18 @@ def build_table(root, old, log, test_results=None):
     return df.sort_values("_k").drop(columns="_k").reset_index(drop=True)
 
 
-# ───────────────────────────── pytest ─────────────────────────────
-
-def run_pytest(root, log):
-    """Гоняет каждый tests/**/test_<slug>.py отдельно. Возвращает {имя файла: 1 — упал, 0 — прошёл}."""
-    results = {}
-    for test in sorted((root / "tests").rglob("test_*.py")):
-        rel = test.relative_to(root).as_posix()
-        run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", rel],
-                             cwd=root, capture_output=True, text=True, timeout=600)
-        failed = int(run.returncode not in (0, 5))             # 5 — в файле не нашлось тестов, это не поломка
-        results[test.name] = max(results.get(test.name, 0), failed)   # одноимённые тесты: упал хоть один → 1
-        last = (run.stdout.strip().splitlines() or ["(нет вывода)"])[-1]
-        log.append(f"{'FAIL ' if failed else 'INFO '} {rel}: pytest — {last}")
-    return results
-
-
 # ───────────────────────────── сводка (для README, истории и ноутбука) ─────────────────────────────
 
 def numeric(df):
-    """Копия таблицы с числами + undone (сколько из четырёх задач не сделано) и share (доля повторений)."""
+    """Копия таблицы с числами + undone (сколько ОБЯЗАТЕЛЬНЫХ для этапа задач не сделано) и share (доля цвета)."""
     df = df.copy()
-    for col in ["learned", "repeated", "readme", "experiment", "test_create", "test_run"]:
+    for col in ["learned", "repeated", "score", "readme", "experiment", "test_create", "test_run"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-    df["undone"] = ((df["learned"] < 1).astype(int) + (df["readme"] == 0) +  # сколько из четырёх задач не сделано
-                    (df["experiment"] == 0) + (df["test_create"] == 0))
-    df["share"] = df["repeated"].clip(upper=FULL) / FULL                      # повторения → доля от 0 до 1
+    done = {"learned": df["learned"] >= 1, "readme": df["readme"] == 1,
+            "experiment": df["experiment"] == 1, "test": df["test_create"] == 1}   # сделана ли каждая задача
+    df["undone"] = [sum(not done[task][i] for task in REQUIRED.get(stage, TASKS))   # только обязательные для этапа
+                    for i, stage in zip(df.index, df["stage"])]
+    df["share"] = df["score"].clip(upper=FULL) / FULL                         # итог повторов со штрафом → доля 0..1
     return df
 
 
@@ -314,11 +417,11 @@ def draw_legend(ax, x, y, s):
     def label(px, text):
         if ax is not None:
             ax.text(px, y + 0.5, text, ha="left", va="center", fontsize=8 * s, color="#57606a")
-        return px + len(text) * 0.22 + 1.2                     # грубая оценка ширины текста в клетках + отступ
+        return px + len(text) * 0.25 + 1.2                     # грубая оценка ширины текста в клетках + отступ
 
     for k in range(1, 5):                                      # четыре уровня штриховки на сером фоне
         cube(x + k - 1, undone=k)
-    x = label(x + 4.2, "не сделано 1–4 из: learned, readme, experiment, test")
+    x = label(x + 4.2, "не сделано обязательных задач этапа: 1–4")
     cube(x, undone=3, in_progress=True)
     x = label(x + 1.2, "in_progress")
     cube(x, share=0.5, broken=True)
@@ -346,93 +449,93 @@ def draw_thermometer(ax, x, top, bottom, s, width=0.75):
         ax.text(x1 + 0.52, y, f"{p:.0%}", va="center", ha="left", fontsize=8 * s, color="#57606a")
 
 
-# ───────────────────────────── README-отчёт ─────────────────────────────
+# ───────────────────────────── радар ─────────────────────────────
+
+def render_radar(df, out_path):
+    """Радар («роза ветров»): 7 лучей-этапов, по лучу — готовность этапа в процентах."""
+    readiness = stage_summary(df).set_index("этап")["готовность, %"]
+    values = [float(readiness.get(stage, 0)) for stage in ORDER]
+    angles = np.linspace(0, 2 * np.pi, len(ORDER), endpoint=False)
+    ring_a, ring_v = np.append(angles, angles[0]), np.append(values, values[0])   # замыкаем многоугольник
+
+    fig = plt.figure(figsize=(5.4, 5.4))
+    ax = fig.add_subplot(projection="polar")                   # polar (полярные координаты): угол + радиус
+    ax.set_theta_offset(np.pi / 2)                             # первый луч — вверх
+    ax.set_theta_direction(-1)                                 # дальше по часовой стрелке
+    ax.fill(ring_a, ring_v, color="#40c463", alpha=0.35, zorder=2)   # полупрозрачная заливка в гамме кубиков
+    ax.plot(ring_a, ring_v, color="#216e39", linewidth=1.6, zorder=3)
+    ax.scatter(angles, values, color="#216e39", s=14, zorder=4)
+
+    ax.set_ylim(0, 100)                                        # шкала 0–100%
+    ax.set_yticks([25, 50, 75, 100])                           # кольца
+    ax.set_yticklabels(["25%", "50%", "75%", "100%"], fontsize=7, color="#8c959f")
+    ax.set_rlabel_position(180 / len(ORDER))                   # подписи колец — между первыми лучами
+    ax.set_xticks(angles)
+    ax.set_xticklabels([f"{stage} · {v:.0f}%" for stage, v in zip(ORDER, values)], fontsize=8.5, color="#24292f")
+    ax.tick_params(axis="x", pad=8)
+    ax.grid(color="#d0d7de", linewidth=0.8)
+    ax.spines["polar"].set_color("#d0d7de")
+    ax.set_title("Радар навыков · готовность этапов", fontsize=11, fontweight="bold", color="#24292f", pad=18)
+
+    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=200, bbox_inches="tight", facecolor="white", metadata={"Software": None})
+    plt.close(fig)
+
+
+# ───────────────────────────── README-визитка ─────────────────────────────
 
 START, END = "<!-- progress:start -->", "<!-- progress:end -->"
-
-
-def cell(text):
-    """Текст для ячейки markdown-таблицы: без переносов и с экранированным «|»."""
-    return str(text).replace("|", "\\|").replace("\n", " ").strip()
-
-
-def file_link(path):
-    return f"[`{Path(path).name}`]({path})" if path else "—"
-
-
-def topics_table(g):
-    """Таблица тем: тема · этап / подраздел · файл · где применяется."""
-    if g.empty:
-        return "_Пока пусто._\n"
-    lines = ["| Тема | Этап / подраздел | Файл | Где применяется |", "|---|---|---|---|"]
-    for _, t in g.iterrows():
-        lines.append(f"| {t['slug']} | {t['stage']} / {t['subsection']} | {file_link(t['path'])} | "
-                     f"{cell(t['description']) or '—'} |")
-    return "\n".join(lines) + "\n"
+TITLES = {"eda": "EDA", "preprocessing": "Preprocessing", "model": "Model", "activations": "Activations",
+          "losses": "Losses", "optimizers": "Optimizers", "metrics": "Metrics"}
 
 
 def build_readme(df):
-    """Личный отчёт: картинка, проценты, изучено / в работе / планы, проблемы. Всё — из таблицы."""
-    d = numeric(df)
-    summary = stage_summary(df)
-    total = summary.iloc[-1]
-    out = ["# ROADMAP-ML", "",
-           "Мой личный трекер пути в ML: что уже изучено, что в работе, что впереди и где сейчас проблемы.",
-           "Этот файл собирается сам из `src/` скриптом `scripts/update_progress.py` — руками не править.",
-           "", START, "![ROADMAP-ML progress](assets/progress.png)", END, "",
-           "## Прогресс", "",
-           f"**Готовность: {total['готовность, %']:g}%** · ready {total['ready']} из {total['тем']} тем · "
-           f"in_progress {total['in_progress']} · todo {total['todo']} · "
-           f"закреплено повторениями: {total['повторения, %']:g}%", "",
-           "| Этап | Тем | ready | in_progress | todo | Готовность | Повторения |",
-           "|---|---:|---:|---:|---:|---:|---:|"]
-    for _, r in summary.iterrows():
-        name = f"**{r['этап']}**" if r["этап"] == "всего" else r["этап"]
-        out.append(f"| {name} | {r['тем']} | {r['ready']} | {r['in_progress']} | {r['todo']} | "
-                   f"{r['готовность, %']:g}% | {r['повторения, %']:g}% |")
-    out += ["", "_Готовность — среднее `learned` (ready = 1, in_progress = 0.5, todo = 0). "
-                "Повторения — `repeated` / 4, по ним красятся кубики на картинке. "
-                "Динамика — в `progress_history.csv`._", ""]
-
-    out += ["## Изучено", "", topics_table(d[d["learned"] == 1]),
-            "## В работе", "", topics_table(d[d["status"] == "in_progress"]),
-            "## Планы", "", "_Статус `todo` — ещё предстоит выучить._", ""]
-    plans = d[d["status"] == "todo"]
+    """Витрина для работодателя: шапка, как читать, карта, радар, что в работе, темы по этапам. Всё — из таблицы."""
+    in_work = df.loc[df["status"] == "in_progress", "slug"].tolist()
+    out = ["<!-- Файл собирается сам: scripts/update_progress.py. Руками не править. -->",
+           "# ROADMAP-ML", "",
+           "**Моя личная библиотека ML — техкарта знаний и навыков**", "",
+           "ML / Data Science разработчик", "",
+           "## Как читать карту", "",
+           "- Каждый квадрат — тема.",
+           "- Ярче зелёный — увереннее владею: больше свежих повторений.",
+           "- Меньше штриховки — полнее проработана: теория, конспект, эксперимент, тест.",
+           "- Оранжевая рамка — в работе сейчас.", "",
+           "## Карта прогресса", "", START, "![ROADMAP-ML progress](assets/progress.png)", END, "",
+           "## Радар навыков", "", "![Радар навыков](assets/radar.png)", "",
+           "## Сейчас в работе", "", " · ".join(in_work) if in_work else "—", "",
+           "## Темы", ""]
     for stage in ORDER:
-        g = plans[plans["stage"] == stage]
+        g = df[df["stage"] == stage]
         if g.empty:
             continue
-        out.append(f"<details><summary><b>{stage}</b> — {len(g)}</summary>\n")
+        out += [f"<details><summary><b>{TITLES.get(stage, stage)}</b> — {len(g)}</summary>", "",
+                "| Подраздел | Темы |", "|---|---|"]
         for sub, sg in g.groupby("subsection", sort=False):
-            out.append(f"- **{sub}**: " + ", ".join(sg["slug"]))
+            out.append(f"| {sub} | {', '.join(sg['slug'])} |")
         out += ["", "</details>", ""]
-
-    no_status = d[~d["status"].isin(LEARNED)]
-    broken = d[d["test_run"] == 1]
-    out += ["## Проблемы", ""]
-    if no_status.empty and broken.empty:
-        out += ["_Проблем нет._", ""]
-    if not broken.empty:
-        out += [f"**`!` Сломан тест — {len(broken)}**", ""]
-        out += [f"- {t['slug']} — {file_link(t['path'])}" for _, t in broken.iterrows()] + [""]
-    if not no_status.empty:
-        out += [f"**`?` Нет или неверный `status` в шапке — {len(no_status)}**", ""]
-        out += [f"- {t['slug']} — {file_link(t['path'])}" for _, t in no_status.iterrows()] + [""]
     return "\n".join(out).rstrip() + "\n"
+
+
+def problems(df, results):
+    """Для ноутбука: упавшие тесты [(тест, файл)] и файлы без корректного статуса."""
+    failed = [case for res in results.values() for case in res["failed"]]
+    no_status = df.loc[~df["status"].isin(LEARNED), "path"].tolist()
+    return {"failed_tests": failed, "no_status": no_status}
 
 
 # ───────────────────────────── запуск ─────────────────────────────
 
-def main(root=ROOT, verbose=True, pytest=False):
-    """Полный цикл. Возвращает таблицу и строки лога (удобно для ноутбука).
-    pytest=True — прогнать тесты и проставить test_run по факту, иначе test_run берётся из таблицы."""
+def main(root=ROOT, verbose=True, skip_tests=False):
+    """Полный цикл. Возвращает таблицу, строки лога и проблемы (удобно для ноутбука).
+    skip_tests=True — не гонять pytest: повторы и test_run берутся из прошлой таблицы."""
     root = Path(root).resolve()
     csv_path, log_path = root / "roadmap_tracker.csv", root / "logs" / "progress.log"
     old = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str, keep_default_na=False) \
-        if csv_path.exists() else pd.DataFrame(columns=COLUMNS)   # старая таблица нужна только ради ручных полей
+        if csv_path.exists() else pd.DataFrame(columns=COLUMNS)   # старая таблица нужна ради порядка строк и --skip-tests
     log = []
-    test_results = run_pytest(root, log) if pytest else None
-    df = build_table(root, old, log, test_results)
+    results = run_tests(root, log, run=not skip_tests)
+    df = build_table(root, old, log, results, ran_tests=not skip_tests)
     df.to_csv(csv_path, index=False, encoding="utf-8-sig")
     append_history(root, df, log)
 
@@ -441,6 +544,7 @@ def main(root=ROOT, verbose=True, pytest=False):
     log_path.write_text(f"# update_progress {stamp}\n" + "\n".join(log) + "\n", encoding="utf-8")   # перезапись при каждом запуске
 
     render_tracker(df, root / "assets" / "progress.png")
+    render_radar(df, root / "assets" / "radar.png")
     (root / "README.md").write_text(build_readme(df), encoding="utf-8")
 
     if verbose:
@@ -448,14 +552,15 @@ def main(root=ROOT, verbose=True, pytest=False):
             if not line.startswith("INFO"):
                 print(line)
         print(stage_summary(df).to_string(index=False))
-        print(f"Готово: roadmap_tracker.csv, progress_history.csv, logs/progress.log, assets/progress.png, README.md "
-              f"(тем: {len(df)}, предупреждений: {sum(l.startswith('WARN') for l in log)})")
-    return df, log
+        print(f"Готово: roadmap_tracker.csv, progress_history.csv, logs/progress.log, assets/progress.png, "
+              f"assets/radar.png, README.md (тем: {len(df)}, предупреждений: {sum(l.startswith('WARN') for l in log)})")
+    return df, log, problems(df, results)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=ROOT, help="корень проекта (по умолчанию — репозиторий)")
-    parser.add_argument("--pytest", action="store_true", help="прогнать pytest и проставить test_run автоматически")
+    parser.add_argument("--skip-tests", action="store_true",
+                        help="не гонять pytest: повторы и test_run взять из прошлой таблицы")
     args = parser.parse_args()
-    main(args.root, pytest=args.pytest)
+    main(args.root, skip_tests=args.skip_tests)
