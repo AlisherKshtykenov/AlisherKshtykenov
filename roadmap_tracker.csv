@@ -73,6 +73,12 @@ preprocessing,imbalance,adasyn,src/preprocessing/imbalance/adasyn.py,,todo,0,0,,
 preprocessing,imbalance,random_undersampling,src/preprocessing/imbalance/random_undersampling.py,,todo,0,0,,0,0,0,0,0
 preprocessing,imbalance,tomek_links,src/preprocessing/imbalance/tomek_links.py,,todo,0,0,,0,0,0,0,0
 preprocessing,imbalance,class_weights,src/preprocessing/imbalance/class_weights.py,,todo,0,0,,0,0,0,0,0
+preprocessing,augmentation,blur,src/preprocessing/augmentation/blur.py,,,0,0,,0,0,0,0,0
+preprocessing,augmentation,cutout,src/preprocessing/augmentation/cutout.py,,,0,0,,0,0,0,0,0
+preprocessing,augmentation,flip,src/preprocessing/augmentation/flip.py,,,0,0,,0,0,0,0,0
+preprocessing,augmentation,gaussian_noise,src/preprocessing/augmentation/gaussian_noise.py,,,0,0,,0,0,0,0,0
+preprocessing,augmentation,random_crop,src/preprocessing/augmentation/random_crop.py,,,0,0,,0,0,0,0,0
+preprocessing,augmentation,rotation,src/preprocessing/augmentation/rotation.py,,,0,0,,0,0,0,0,0
 model,classification,logistic_regression,src/model/classification/logistic_regression/logistic_regression.py,,in_progress,0.5,0,,0,0,1,1,0
 model,classification,naive_bayes,src/model/classification/naive_bayes/naive_bayes.py,,todo,0,0,,0,0,0,0,0
 model,classification,decision_tree,src/model/classification/decision_tree/decision_tree.py,,todo,0,0,,0,0,0,0,0

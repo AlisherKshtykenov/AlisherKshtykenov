@@ -40,7 +40,7 @@ logistic_regression · sigmoid · log_loss · batch_gd
 
 </details>
 
-<details><summary><b>Preprocessing</b> — 64</summary>
+<details><summary><b>Preprocessing</b> — 70</summary>
 
 | Подраздел | Темы |
 |---|---|
@@ -53,6 +53,7 @@ logistic_regression · sigmoid · log_loss · batch_gd
 | feature_selection | variance_threshold, correlation, chi2, mutual_information, rfe, forward_selection, backward_elimination, lasso, tree_importance |
 | splitting | holdout, stratified, kfold, stratified_kfold, group_kfold, time_series_split, leave_one_out |
 | imbalance | random_oversampling, smote, adasyn, random_undersampling, tomek_links, class_weights |
+| augmentation | blur, cutout, flip, gaussian_noise, random_crop, rotation |
 
 </details>
 
