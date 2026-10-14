@@ -354,7 +354,7 @@ def render_tracker(df, out_path, scale=0.7):
     ax.set_aspect("equal")
     ax.axis("off")
 
-    progress = df["share"].mean()                              # общий прогресс по всему роадмапу
+    progress = df["share"].mean()                              # общий прогресс по всему роадмапу (= overall_progress)
     ax.set_title(f"ROADMAP-ML · прогресс {progress:.0%}", loc="left",
                  fontsize=14 * s, fontweight="bold", color="#24292f", pad=4)
 
@@ -450,36 +450,86 @@ def draw_thermometer(ax, x, top, bottom, s, width=0.75):
 
 
 # ───────────────────────────── радар ─────────────────────────────
+# Согласованный вид (из radar.py) — внешний вид не менять.
 
-def render_radar(df, out_path):
-    """Радар («роза ветров»): 7 лучей-этапов, по лучу — готовность этапа в процентах."""
-    readiness = stage_summary(df).set_index("этап")["готовность, %"]
-    values = [float(readiness.get(stage, 0)) for stage in ORDER]
-    angles = np.linspace(0, 2 * np.pi, len(ORDER), endpoint=False)
-    ring_a, ring_v = np.append(angles, angles[0]), np.append(values, values[0])   # замыкаем многоугольник
+GREEN, GREEN_FILL = "#216e39", "#40c463"                         # зелёная гамма, как у кубиков на карте
+GRID, TEXT, MUTED = "#d0d7de", "#24292f", "#57606a"
+STEPS = (0.05, 0.10, 0.25, 0.50, 1.00)                           # возможные «потолки» шкалы: 5%, 10%, 25%, 50%, 100%
 
-    fig = plt.figure(figsize=(5.4, 5.4))
-    ax = fig.add_subplot(projection="polar")                   # polar (полярные координаты): угол + радиус
-    ax.set_theta_offset(np.pi / 2)                             # первый луч — вверх
-    ax.set_theta_direction(-1)                                 # дальше по часовой стрелке
-    ax.fill(ring_a, ring_v, color="#40c463", alpha=0.35, zorder=2)   # полупрозрачная заливка в гамме кубиков
-    ax.plot(ring_a, ring_v, color="#216e39", linewidth=1.6, zorder=3)
-    ax.scatter(angles, values, color="#216e39", s=14, zorder=4)
 
-    ax.set_ylim(0, 100)                                        # шкала 0–100%
-    ax.set_yticks([25, 50, 75, 100])                           # кольца
-    ax.set_yticklabels(["25%", "50%", "75%", "100%"], fontsize=7, color="#8c959f")
-    ax.set_rlabel_position(180 / len(ORDER))                   # подписи колец — между первыми лучами
-    ax.set_xticks(angles)
-    ax.set_xticklabels([f"{stage} · {v:.0f}%" for stage, v in zip(ORDER, values)], fontsize=8.5, color="#24292f")
-    ax.tick_params(axis="x", pad=8)
-    ax.grid(color="#d0d7de", linewidth=0.8)
-    ax.spines["polar"].set_color("#d0d7de")
-    ax.set_title("Радар навыков · готовность этапов", fontsize=11, fontweight="bold", color="#24292f", pad=18)
 
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=200, bbox_inches="tight", facecolor="white", metadata={"Software": None})
+def pick_scale(vals):
+    """Самый маленький потолок, в который влезает максимум с небольшим запасом."""
+    top = max(vals.max(), 1e-9) * 1.1                            # *1.1 — запас, чтобы точка не лежала на самом краю
+    return next(s for s in STEPS if s >= top)                    # первый подходящий; если почти 100% — будет 1.0
+
+
+def render_radar(values, out_path, total=None, size=3.2):
+    """values — словарь {этап: доля готовности от 0 до 1}; total — общий прогресс (если None — среднее по этапам)."""
+    names = list(values)
+    vals = np.array([values[n] for n in names])
+    n = len(names)
+    angles = np.linspace(0, 2 * np.pi, n, endpoint=False)        # угол каждого луча
+    scale = pick_scale(vals)                                     # текущий потолок шкалы
+    r_vals = vals / scale                                        # растягиваем значения: потолок = внешнее кольцо
+
+    fig = plt.figure(figsize=(size * 2.1, size))
+    ax = fig.add_axes([0.02, 0.06, 0.48, 0.88], polar=True)      # радар — левая половина картинки
+    ax.set_theta_offset(np.pi / 2)                               # первый луч смотрит вверх
+    ax.set_theta_direction(-1)                                   # лучи идут по часовой стрелке
+
+    for r in (0.25, 0.5, 0.75, 1.0):                             # кольца-уровни без подписей
+        ax.plot(np.linspace(0, 2 * np.pi, 200), [r] * 200, color=GRID, lw=0.8)
+    for a in angles:                                             # сами лучи
+        ax.plot([a, a], [0, 1], color=GRID, lw=0.8)
+
+    closed_a = np.append(angles, angles[0])                      # замыкаем многоугольник на первую точку
+    closed_v = np.append(r_vals, r_vals[0])
+    ax.fill(closed_a, closed_v, color=GREEN_FILL, alpha=0.35)
+    ax.plot(closed_a, closed_v, color=GREEN, lw=1.5)
+    ax.scatter(angles, r_vals, color=GREEN, s=12, zorder=3)
+    ax.text(np.radians(22), 1.0, f"{scale:.0%}", fontsize=6.5, color=MUTED,   # подпись: сколько сейчас значит внешнее кольцо
+            ha="left", va="bottom")
+
+    for a, name in zip(angles, names):                           # подпись поперёк луча
+        deg = np.degrees(a)                                      # 0° — верх, дальше по часовой
+        rot = -deg                                               # повернуть текст перпендикулярно лучу
+        if 90 < deg < 270:                                       # нижняя половина — перевернуть, чтобы не читать вверх ногами
+            rot += 180
+        ax.text(a, 1.16, name, rotation=rot, rotation_mode="anchor",
+                ha="center", va="center", fontsize=8, color=TEXT)
+
+    ax.set_ylim(0, 1.25)
+    ax.axis("off")                                               # убираем стандартную сетку и подписи matplotlib
+
+    tab = fig.add_axes([0.56, 0.12, 0.42, 0.76]); tab.axis("off")   # таблица — правая половина
+    rows = [[name, f"{v:.0%}"] for name, v in zip(names, vals)]
+    rows.append(["всего", f"{(vals.mean() if total is None else total):.0%}"])   # «всего» = общий прогресс, как на карте
+    t = tab.table(cellText=rows, colLabels=["этап", "готовность"], loc="center",
+                  colWidths=[0.65, 0.35], cellLoc="left")
+    t.auto_set_font_size(False); t.set_fontsize(8); t.scale(1, 1.35)
+    for (r, c), cell in t.get_celld().items():
+        cell.set_edgecolor(GRID); cell.set_linewidth(0.6)
+        if c == 1: cell.set_text_props(ha="right")               # проценты выровнены вправо
+        if r == 0: cell.set_text_props(weight="bold", color=TEXT); cell.set_facecolor("#f6f8fa")
+        elif r == len(rows): cell.set_text_props(weight="bold")  # строка «всего» жирным
+        else: cell.set_text_props(color=MUTED if c == 0 else TEXT)
+
+    fig.savefig(out_path, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
+
+
+def overall_progress(df):
+    """Общий процент «насколько знаю сейчас»: среднее score / 10 по всем темам. Тот же, что в заголовке карты."""
+    return numeric(df)["share"].mean()
+
+
+def radar_values(df):
+    """{этап: насколько знаю сейчас, 0..1} в порядке этапов, как на карте.
+    Знание темы = score / 10: засчитанные повторы минус штраф за простой — та же мера, что цвет кубиков."""
+    d = numeric(df)
+    return {stage: float(d.loc[d["stage"] == stage, "share"].mean()) if (d["stage"] == stage).any() else 0.0
+            for stage in ORDER}
 
 
 # ───────────────────────────── README-визитка ─────────────────────────────
@@ -503,6 +553,7 @@ def build_readme(df):
            "- Оранжевая рамка — в работе сейчас.", "",
            "## Карта прогресса", "", START, "![ROADMAP-ML progress](assets/progress.png)", END, "",
            "## Радар навыков", "", "![Радар навыков](assets/radar.png)", "",
+           "_Масштаб радара подстраивается под текущий уровень — точные значения в таблице справа._", "",
            "## Сейчас в работе", "", " · ".join(in_work) if in_work else "—", "",
            "## Темы", ""]
     for stage in ORDER:
@@ -544,7 +595,7 @@ def main(root=ROOT, verbose=True, skip_tests=False):
     log_path.write_text(f"# update_progress {stamp}\n" + "\n".join(log) + "\n", encoding="utf-8")   # перезапись при каждом запуске
 
     render_tracker(df, root / "assets" / "progress.png")
-    render_radar(df, root / "assets" / "radar.png")
+    render_radar(radar_values(df), root / "assets" / "radar.png", total=overall_progress(df))   # «всего» = как в заголовке карты
     (root / "README.md").write_text(build_readme(df), encoding="utf-8")
 
     if verbose:
@@ -563,4 +614,4 @@ if __name__ == "__main__":
     parser.add_argument("--skip-tests", action="store_true",
                         help="не гонять pytest: повторы и test_run взять из прошлой таблицы")
     args = parser.parse_args()
-    main(args.root, skip_tests=args.skip_tests)
+    TABLE, LOG, PROBLEMS = main(args.root, skip_tests=args.skip_tests)   # после %run в ноутбуке эти имена доступны

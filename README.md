@@ -22,6 +22,8 @@ ML / Data Science разработчик
 
 ![Радар навыков](assets/radar.png)
 
+_Масштаб радара подстраивается под текущий уровень — точные значения в таблице справа._
+
 ## Сейчас в работе
 
 logistic_regression · sigmoid · log_loss · batch_gd
