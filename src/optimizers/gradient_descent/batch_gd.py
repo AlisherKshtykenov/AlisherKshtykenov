@@ -1,3 +1,7 @@
+# path: src/optimizers/gradient_descent/batch_gd.py
+# status: in_progress
+# description:
+
 # src/optimizers/gradient_descent/batch_gd.py
 
 

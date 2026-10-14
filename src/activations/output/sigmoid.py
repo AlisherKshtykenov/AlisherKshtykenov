@@ -1,3 +1,7 @@
+# path: src/activations/output/sigmoid.py
+# status: in_progress
+# description:
+
 # src/activations/output/sigmoid.py
 
 

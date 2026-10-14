@@ -1,10 +1,9 @@
-"""Синхронизирует трекер ROADMAP-ML с проектом (в обе стороны), рисует картинку прогресса и пересобирает README-отчёт.
+"""Собирает трекер ROADMAP-ML из архитектуры src/, рисует картинку прогресса, пишет историю и README-отчёт.
 
-Запуск из корня репозитория:  python scripts/update_progress.py
+Запуск из корня репозитория:  python scripts/update_progress.py [--pytest]
+Структура: src/<этап>/<подраздел>/<метод>.py  или  src/<этап>/<подраздел>/<метод>/<метод>.py
 """
 import argparse
-import ast
-import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -20,131 +19,76 @@ from matplotlib.patches import Circle, FancyBboxPatch
 from matplotlib.colors import LinearSegmentedColormap, to_rgb
 
 ROOT = Path(__file__).resolve().parents[1]                     # корень репо (скрипт лежит в scripts/)
-ORDER = ["eda", "preprocessing", "model", "activation", "loss", "optimizer", "metrics"]
+ORDER = ["eda", "preprocessing", "model", "activations", "losses", "optimizers", "metrics"]   # этапы = папки src/
 FULL = 4                                                       # сколько повторений = 100% «осело»
 CMAP = LinearSegmentedColormap.from_list(                      # плавная шкала: серый → тёмно-зелёный
     "progress", ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"])
 LABEL_TOP, TITLE_Y = -0.35, -8.6                               # где подписи разделов и названия этапов (над кубиками)
 
-BASE_COLS = ["topic", "chapter", "step", "learned", "repeated", "readme", "experiment", "test_create", "test_run"]
-SERVICE_COLS = ["slug", "path", "description", "header"]       # служебные столбцы — в конце таблицы
-READY = {"ready", "готов", "done"}                             # статусы «тема изучена»
-STEPS = {"model": "model", "activations": "activation", "losses": "loss",
-         "optimizers": "optimizer", "metrics": "metrics"}      # первая папка пути → этап
-ANALYSIS = {"analysis", "data_prep"}                           # старое и новое имя папки анализа данных — одно и то же
-SKIP_DIRS = {"attempts", "__pycache__"}                        # черновики и кэш — не эталоны
+COLUMNS = ["stage", "subsection", "slug", "path", "description", "status", "learned",
+           "repeated", "readme", "experiment", "test_create", "test_run"]
+MANUAL = ["repeated", "test_run"]                              # ручные поля: при пересборке переносятся по path
+LEARNED = {"todo": 0, "in_progress": 0.5, "ready": 1, "готов": 1, "done": 1}   # статус → learned
+SKIP_DIRS = {"attempts", "__pycache__"}                        # черновики и кэш — не методы
+HISTORY_COLS = ["datetime", "всего"] + ORDER                   # progress_history.csv
 
 BROKEN_COLOR = "#cf222e"                                       # значок «!» (тест сломан) — красный
-MISSING_COLOR = "#8250df"                                      # значок «?» (нет статуса в шапке) — фиолетовый
+MISSING_COLOR = "#8250df"                                      # значок «?» (нет статуса) — фиолетовый
+IN_PROGRESS_COLOR = "#fb8500"                                  # рамка in_progress — оранжевая
 
 
-# ───────────────────────────── обход проекта ─────────────────────────────
+# ───────────────────────────── обход src/ ─────────────────────────────
 
 @dataclass
-class Etalon:
-    slug: str                                                  # slug (короткое имя) — имя папки метода или файла
-    chapter: str                                               # раздел, например analysis/preprocessing/missing
-    step: str                                                  # этап: model, loss, eda, ...
-    path: str                                                  # путь от корня репо, например src/.../sigmoid.py
+class Method:
+    stage: str                                                 # этап — папка верхнего уровня: model, losses, ...
+    subsection: str                                            # подраздел — папка над методом: classification, ...
+    slug: str                                                  # slug (короткое имя) метода = имя файла / папки
+    path: str                                                  # путь от корня репо: src/model/classification/knn/knn.py
     method_dir: Path | None                                    # папка метода (у плоских файлов её нет)
-    status: str | None = None                                  # статус из шапки, None — строки status нет
-    description: str = ""
-    header_path: str | None = None                             # path, записанный в шапке
-    has_code: bool = False                                     # есть ли код кроме шапки и docstring (строки документации)
-
-
-def normalize_chapter(parts):
-    """data_prep/... → analysis/..., чтобы совпадало с таблицей."""
-    parts = list(parts)
-    if parts and parts[0] in ANALYSIS:
-        parts[0] = "analysis"
-    return "/".join(parts)
-
-
-def step_of(chapter):
-    """Этап по первой части пути раздела; None — папка не относится к роадмапу."""
-    parts = chapter.split("/")
-    if parts[0] == "analysis":
-        return parts[1] if len(parts) > 1 and parts[1] in ("eda", "preprocessing") else None
-    return STEPS.get(parts[0])
+    status: str                                                # статус из шапки, "" — строки status нет
+    description: str
 
 
 def read_header(text):
-    """Читает шапку: подряд идущие строки-комментарии `# ключ: значение` в начале файла."""
+    """Шапка: подряд идущие строки-комментарии `# ключ: значение` в начале файла."""
     meta = {}
-    for line in text.splitlines()[:10]:
+    for line in text.splitlines()[:12]:
         line = line.strip()
         if not line.startswith("#"):
             break                                              # шапка кончилась на первой не-комментарной строке
         key, sep, value = line.lstrip("#").partition(":")
         if sep:
-            meta[key.strip().lower()] = value.strip()
+            meta.setdefault(key.strip().lower(), value.strip())
     return meta
 
 
-DEFS = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)   # функции и классы
-
-
-def is_stub(node):
-    """Заглушка: импорт, pass, `...`, docstring или функция/класс, внутри которых только заглушки."""
-    if isinstance(node, (ast.Import, ast.ImportFrom, ast.Pass)):
-        return True
-    if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):   # docstring (строка документации) или `...`
-        return True
-    if isinstance(node, DEFS):
-        return all(is_stub(n) for n in node.body)              # def mse(): pass — пусто; класс из пустых методов — пусто
-    return False
-
-
-def has_code(text):
-    """True — есть хотя бы одна функция или класс с настоящим телом. Проверка через ast (синтаксическое дерево),
-    поэтому шапка и комментарии не видны вовсе, а импорты, pass, `...`, docstring и пустые def/class не считаются."""
-    try:
-        body = ast.parse(text).body
-    except SyntaxError:
-        return True                                            # битый код — всё равно код
-    return any(isinstance(node, DEFS) and not is_stub(node) for node in body)
-
-
-def py_etalons_in(folder):
-    return [p for p in folder.glob("*.py") if not p.name.startswith("_")]
-
-
-def is_method_dir(folder):
-    """Папка метода: внутри нет подпапок (кроме attempts/кэша) и нет других .py, кроме `<имя папки>.py`."""
-    subdirs = [d for d in folder.iterdir() if d.is_dir() and d.name not in SKIP_DIRS]
-    return not subdirs and all(p.stem == folder.name for p in py_etalons_in(folder))
-
-
-def scan_project(root):
-    """Эталоны (.py) и папки методов без .py. Понимает и `<method>/<method>.py`, и плоские `<chapter>/<method>.py`."""
-    src, etalons, empty_dirs = root / "src", [], []
-    for folder in sorted([src, *src.rglob("*")]):
-        if not folder.is_dir() or SKIP_DIRS & set(folder.relative_to(src).parts):
+def scan_src(root, log):
+    """Все методы из src/<этап>/<подраздел>/. Неожиданная вложенность и папки без <метод>.py — в лог."""
+    methods = []
+    for stage in ORDER:
+        stage_dir = root / "src" / stage
+        if not stage_dir.is_dir():
             continue
-        method = folder != src and is_method_dir(folder)
-        chapter_dir = folder.parent if method else folder
-        chapter = normalize_chapter(chapter_dir.relative_to(src).parts)
-        step = step_of(chapter) if chapter else None
-        if step is None:
-            continue                                           # src/utils и прочее вне роадмапа
-        files = py_etalons_in(folder)
-        if method and not files:                               # папка метода заведена, а файла ещё нет
-            empty_dirs.append(Etalon(slug=folder.name, chapter=chapter, step=step, path="", method_dir=folder))
-        for py in files:
-            text = py.read_text(encoding="utf-8", errors="replace")
-            meta = read_header(text)
-            etalons.append(Etalon(slug=py.stem, chapter=chapter, step=step,
-                                  path=py.relative_to(root).as_posix(), method_dir=folder if method else None,
-                                  status=meta.get("status"), description=meta.get("description", ""),
-                                  header_path=meta.get("path"), has_code=has_code(text)))
-    return etalons, empty_dirs
-
-
-def slug_from_topic(topic):
-    """`Logistic Regression (логистическая регрессия)` → `logistic_regression`."""
-    name = topic.split("(")[0].lower()
-    return re.sub(r"[^a-zа-яё0-9]+", "_", name).strip("_")
+        for sub in sorted(d for d in stage_dir.iterdir() if d.is_dir() and d.name not in SKIP_DIRS):
+            for item in sorted(sub.iterdir()):
+                if item.name in SKIP_DIRS or item.name.startswith(("_", ".")):
+                    continue
+                if item.is_file() and item.suffix == ".py":    # плоский метод: .../output/sigmoid.py
+                    py, method_dir = item, None
+                elif item.is_dir() and (item / f"{item.name}.py").is_file():   # папка метода: .../knn/knn.py
+                    py, method_dir = item / f"{item.name}.py", item
+                elif item.is_dir():
+                    log.append(f"WARN  {item.relative_to(root).as_posix()}/: папка без {item.name}.py — "
+                               f"не метод (лишняя вложенность?)")
+                    continue
+                else:
+                    continue                                   # README.md и прочие файлы подраздела
+                meta = read_header(py.read_text(encoding="utf-8", errors="replace"))
+                methods.append(Method(stage=stage, subsection=sub.name, slug=py.stem,
+                                      path=py.relative_to(root).as_posix(), method_dir=method_dir,
+                                      status=meta.get("status", "").lower(), description=meta.get("description", "")))
+    return methods
 
 
 def readme_has_text(folder):
@@ -156,145 +100,48 @@ def readme_has_text(folder):
     return int(any(l and not l.startswith("#") for l in lines))
 
 
-def in_chapter(item_chapter, row_chapter):
-    """Файл лежит в разделе строки или глубже (missing/imputation → missing)."""
-    return item_chapter == row_chapter or item_chapter.startswith(row_chapter + "/")
+# ───────────────────────────── таблица ─────────────────────────────
 
-
-def chapter_dir(root, chapter):
-    """Папка раздела на диске: analysis/... может физически лежать в data_prep/."""
-    head, *rest = chapter.split("/")
-    for name in (["analysis", "data_prep"] if head == "analysis" else [head]):
-        if (root / "src" / name).is_dir():
-            return root / "src" / name / Path(*rest)
-    return root / "src" / Path(chapter)
-
-
-def new_file_path(root, chapter, slug, etalons):
-    """Куда класть новый файл: если в разделе методы лежат папками — `<slug>/<slug>.py`, иначе `<slug>.py`."""
-    folder = chapter_dir(root, chapter)
-    by_folders = any(e.method_dir is not None for e in etalons if in_chapter(e.chapter, chapter))
-    return folder / slug / f"{slug}.py" if by_folders else folder / f"{slug}.py"
-
-
-def create_stub(root, py):
-    """Пустой эталон с шапкой. Существующие файлы не трогаем никогда."""
-    rel = py.relative_to(root).as_posix()
-    if not py.exists():
-        py.parent.mkdir(parents=True, exist_ok=True)
-        py.write_text(f"# path: {rel}\n# status: in_progress\n# description:\n", encoding="utf-8")
-    return rel
-
-
-# ───────────────────────────── синхронизация таблицы ─────────────────────────────
-
-def key(e):
-    """Ключ занятости кандидата: путь файла или папка метода без файла."""
-    return e.path or str(e.method_dir)
-
-
-def pick(items, slug, row, claimed, step_wide):
-    """Строго по равенству slug: в разделе строки (или глубже); step_wide — единственный такой slug на этапе."""
-    free = [e for e in items if e.slug == slug and key(e) not in claimed]
-    free.sort(key=lambda e: e.path != row["path"])             # одинаковый slug — сначала файл, уже записанный в строке
-    if not step_wide:
-        same = [e for e in free if in_chapter(e.chapter, row["chapter"])]
-        return same[0] if same else None
-    on_step = [e for e in free if e.step == row["step"]]
-    return on_step[0] if len(on_step) == 1 else None          # knn есть в двух разделах → не угадываем
-
-
-def sync_table(root, df, log, created, test_results=None):
-    """Таблица ⇄ архитектура: сопоставляет по slug, создаёт недостающие файлы, дописывает новые темы, считает поля."""
-    for col in BASE_COLS + SERVICE_COLS:
-        if col not in df.columns:
-            df[col] = ""
-    extra = [c for c in df.columns if c not in BASE_COLS + SERVICE_COLS]
-    df = df[BASE_COLS + extra + SERVICE_COLS].astype(object)   # служебные — в конец, лишние столбцы не теряем
-
-    etalons, empty_dirs = scan_project(root)
-    candidates = etalons + empty_dirs                          # файлы-эталоны и папки методов, где файла ещё нет
-    claimed, found, match = set(), {}, {}
-
-    # 1. строка → файл / папка метода — только по slug: сначала в своём разделе для всех строк, потом по этапу
-    for step_wide in (False, True):
-        for i, row in df.iterrows():
-            if i in found:
-                continue
-            e = pick(candidates, row["slug"] or slug_from_topic(row["topic"]), row, claimed, step_wide)
-            if e is not None:
-                found[i] = e
-                claimed.add(key(e))
-
-    for i, row in df.iterrows():
-        slug = row["slug"] or slug_from_topic(row["topic"])
-        e = found.get(i)
-        if e is None or not e.path:                            # файла нет → создаём пустой эталон с шапкой
-            if e is not None:                                  # папка метода уже есть — кладём файл в неё
-                py = e.method_dir / f"{slug}.py"
-            elif row["slug"]:                                  # slug задан явно — заводим файл по chapter + slug
-                py = new_file_path(root, row["chapter"], slug, etalons)
-            else:                                              # slug выведен из названия и ни с чем не совпал
-                log.append(f"WARN  строка «{row['topic']}» ({row['chapter']}): нет файла или папки со slug «{slug}» — "
-                           f"впишите правильный slug в таблицу (файл не создан, чтобы не плодить лишнее)")
-                continue
-            created.append(create_stub(root, py))
-            log.append(f"NEW   {created[-1]}: создан пустой эталон для «{row['topic']}»")
-            e = Etalon(slug=slug, chapter=row["chapter"], step=row["step"], path=created[-1],
-                       method_dir=py.parent if py.parent.name == slug else None, status="in_progress")
-        match[i] = e
-        claimed.add(e.path)
-        df.at[i, "slug"] = slug                                # запоминаем slug — дальше сопоставление точное
-
-    # 2. файл → строка: эталоны, которых нет в таблице
-    new_rows = []
-    for e in etalons + empty_dirs:                              # и папки методов без .py (deep_learning/.../resnet)
-        if key(e) in claimed:
-            continue
-        if not e.path:                                         # папка метода есть, а файла нет → заводим файл в ней
-            e.path = create_stub(root, e.method_dir / f"{e.slug}.py")
-            e.status = "in_progress"
-            created.append(e.path)
-            log.append(f"NEW   {e.path}: создан пустой эталон в папке метода")
-        new_rows.append({**{c: "" for c in df.columns}, "topic": e.slug, "chapter": e.chapter, "step": e.step,
-                         "slug": e.slug, "repeated": 0, "test_run": 0})   # раздел — из пути файла
-        match[len(df) + len(new_rows) - 1] = e
-        log.append(f"INFO  {e.path}: новая тема «{e.slug}» добавлена в таблицу")
-    if new_rows:
-        df = pd.concat([df, pd.DataFrame(new_rows, columns=df.columns)], ignore_index=True).astype(object)
-
-    # 3. поля по правилам
+def build_table(root, old, log, test_results=None):
+    """Пересобирает таблицу из src/. Ручные поля (repeated, test_run) берёт из старой таблицы по path."""
+    manual = old.set_index("path")[[c for c in MANUAL if c in old.columns]].to_dict("index") \
+        if "path" in old.columns else {}
+    order = {p: i for i, p in enumerate(old["path"])} if "path" in old.columns else {}   # прежний порядок строк
     tests = {p.name for p in (root / "tests").rglob("test_*.py")} if (root / "tests").is_dir() else set()
-    for i, row in df.iterrows():
-        e = match.get(i)
-        slug = row["slug"] or slug_from_topic(row["topic"])
-        if e is None:                                          # файла нет и создать не смогли
-            learned, header, path, desc, method_dir = 0, "", "", "", None
-        else:
-            if e.status is None:                               # шапки нет или нет строки status
-                header = "missing"
-                log.append(f"WARN  {e.path}: статус отсутствует (нет строки `# status:` в шапке)")
-            else:
-                header = "ok"
-            if not e.has_code:
-                learned = 0                                    # пустой файл = 0, даже со статусом
-            else:
-                learned = 1 if (e.status or "").lower() in READY else 0.5
-            if e.header_path and e.header_path != e.path:
-                log.append(f"WARN  {e.path}: path в шапке ({e.header_path}) не совпадает с реальным путём")
-            path, desc, method_dir = e.path, e.description, e.method_dir
-        exp_dir = root / "experiments" / slug
-        df.at[i, "learned"] = learned
-        df.at[i, "readme"] = readme_has_text(method_dir)
-        df.at[i, "experiment"] = int(exp_dir.is_dir() and any(exp_dir.glob("*.ipynb")))
-        df.at[i, "test_create"] = int(f"test_{slug}.py" in tests)
-        if test_results is not None:                           # --pytest: test_run по факту прогона, теста нет → 0
-            df.at[i, "test_run"] = test_results.get(f"test_{slug}.py", 0)
-        df.at[i, "path"], df.at[i, "description"], df.at[i, "header"] = path, desc, header
 
-    log.append(f"INFO  тем в таблице: {len(df)}, с файлом: {len(match)}, без файла: {len(df) - len(match)}, "
-               f"создано файлов: {len(created)}")
-    return df
+    rows = []
+    for m in scan_src(root, log):
+        if m.status not in LEARNED:
+            log.append(f"WARN  {m.path}: " + (f"неизвестный статус «{m.status}» (ожидается todo / in_progress / ready)"
+                                              if m.status else "статус отсутствует (нет строки `# status:` в шапке)"))
+        kept = manual.get(m.path, {})
+        exp_dir = root / "experiments" / m.slug
+        test_run = kept.get("test_run", 0) if test_results is None else test_results.get(f"test_{m.slug}.py", 0)
+        rows.append({"stage": m.stage, "subsection": m.subsection, "slug": m.slug, "path": m.path,
+                     "description": m.description, "status": m.status,
+                     "learned": LEARNED.get(m.status, 0),       # learned — только из статуса
+                     "repeated": kept.get("repeated", 0) or 0,
+                     "readme": readme_has_text(m.method_dir),
+                     "experiment": int(exp_dir.is_dir() and any(exp_dir.glob("*.ipynb"))),
+                     "test_create": int(f"test_{m.slug}.py" in tests),
+                     "test_run": test_run or 0})
+    df = pd.DataFrame(rows, columns=COLUMNS).astype(object)
+    df["learned"] = [f"{v:g}" for v in df["learned"]]          # 0 / 0.5 / 1, а не 0.0
+
+    gone = set(manual) - set(df["path"])                       # файл удалён → строка пропала (сообщаем)
+    for path in sorted(gone):
+        log.append(f"INFO  {path}: файла больше нет — строка убрана из таблицы")
+    for path in df.loc[~df["path"].isin(order.keys()), "path"]:
+        log.append(f"INFO  {path}: новая тема в таблице")
+
+    # порядок: этап → подраздел (как раньше в таблице) → метод (как раньше), новые — в конец по алфавиту
+    first_sub = {}
+    for i, (stage, sub, path) in enumerate(zip(df["stage"], df["subsection"], df["path"])):
+        k = order.get(path, len(order) + i)
+        first_sub[(stage, sub)] = min(first_sub.get((stage, sub), k), k)   # подраздел — по самой ранней своей строке
+    df["_k"] = [(ORDER.index(s), first_sub[(s, sub)], order.get(p, len(order)), p)
+                for s, sub, p in zip(df["stage"], df["subsection"], df["path"])]
+    return df.sort_values("_k").drop(columns="_k").reset_index(drop=True)
 
 
 # ───────────────────────────── pytest ─────────────────────────────
@@ -313,47 +160,49 @@ def run_pytest(root, log):
     return results
 
 
-def disk_report(root, df):
-    """По этапам: тем в таблице, эталонов на диске (файлы + папки методов), строк без файла, файлов без строки."""
-    etalons, empty_dirs = scan_project(root)
-    on_disk = etalons + empty_dirs
-    paths = set(df["path"])
-    rows = []
-    for step in ORDER:
-        g = df[df["step"] == step]
-        items = [e for e in on_disk if e.step == step]
-        rows.append({"этап": step, "тем в таблице": len(g), "эталонов на диске": len(items),
-                     "строк без файла": int((g["path"] == "").sum()),
-                     "файлов без строки": sum(1 for e in items if (e.path or "") not in paths)})
-    return pd.DataFrame(rows)
-
-
-# ───────────────────────────── сводка (для README и ноутбука) ─────────────────────────────
+# ───────────────────────────── сводка (для README, истории и ноутбука) ─────────────────────────────
 
 def numeric(df):
-    """Копия таблицы с числами вместо текста + колонки todo (сколько задач не сделано) и share (доля повторений)."""
+    """Копия таблицы с числами + undone (сколько из четырёх задач не сделано) и share (доля повторений)."""
     df = df.copy()
     for col in ["learned", "repeated", "readme", "experiment", "test_create", "test_run"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-    df["todo"] = ((df["learned"] < 1).astype(int) + (df["readme"] == 0) +    # сколько из четырёх задач не сделано
-                  (df["experiment"] == 0) + (df["test_create"] == 0))
+    df["undone"] = ((df["learned"] < 1).astype(int) + (df["readme"] == 0) +  # сколько из четырёх задач не сделано
+                    (df["experiment"] == 0) + (df["test_create"] == 0))
     df["share"] = df["repeated"].clip(upper=FULL) / FULL                      # повторения → доля от 0 до 1
     return df
 
 
 def stage_summary(df):
-    """Проценты по этапам: сколько тем, сколько изучено / в работе / в планах, готовность и закреплённость."""
+    """Проценты по этапам: сколько тем, сколько todo / in_progress / ready, готовность и закреплённость."""
     d = numeric(df)
     rows = []
-    for step in ORDER + ["всего"]:
-        g = d if step == "всего" else d[d["step"] == step]
+    for stage in ORDER + ["всего"]:
+        g = d if stage == "всего" else d[d["stage"] == stage]
         if g.empty:
             continue
-        rows.append({"этап": step, "тем": len(g), "изучено": int((g["learned"] == 1).sum()),
-                     "в работе": int((g["learned"] == 0.5).sum()), "в планах": int((g["learned"] == 0).sum()),
-                     "готовность, %": round(g["learned"].mean() * 100),     # среднее learned: 1 / 0.5 / 0
-                     "повторения, %": round(g["share"].mean() * 100)})     # как на картинке: repeated / 4
+        rows.append({"этап": stage, "тем": len(g), "ready": int((g["learned"] == 1).sum()),
+                     "in_progress": int((g["learned"] == 0.5).sum()), "todo": int((g["learned"] == 0).sum()),
+                     "готовность, %": round(g["learned"].mean() * 100, 1),  # среднее learned: 1 / 0.5 / 0
+                     "повторения, %": round(g["share"].mean() * 100, 1)})  # как на картинке: repeated / 4
     return pd.DataFrame(rows)
+
+
+def append_history(root, df, log):
+    """Дописывает строку в progress_history.csv, только если проценты изменились с прошлого раза."""
+    path = root / "progress_history.csv"
+    summary = stage_summary(df).set_index("этап")["готовность, %"]
+    row = {"datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+           **{c: summary.get(c, 0.0) for c in HISTORY_COLS[1:]}}
+    if path.exists():
+        hist = pd.read_csv(path, encoding="utf-8-sig")
+        if len(hist) and all(abs(float(hist.iloc[-1][c]) - float(row[c])) < 1e-9 for c in HISTORY_COLS[1:]):
+            log.append("INFO  progress_history.csv: проценты не изменились — строка не дописана")
+            return False
+    pd.DataFrame([row], columns=HISTORY_COLS).to_csv(path, mode="a", header=not path.exists(),
+                                                     index=False, encoding="utf-8-sig")   # только дописываем
+    log.append(f"INFO  progress_history.csv: дописана строка (всего {row['всего']}%)")
+    return True
 
 
 # ───────────────────────────── картинка ─────────────────────────────
@@ -362,12 +211,14 @@ def render_tracker(df, out_path, scale=0.7):
     df = numeric(df)
 
     columns, chapters, steps = [], [], []
-    for step in ORDER:
+    for stage in ORDER:
         start = len(columns)
-        for chapter, grp in df[df["step"] == step].groupby("chapter", sort=False):
-            chapters.append((len(columns), chapter.split("/")[-1]))
+        for sub, grp in df[df["stage"] == stage].groupby("subsection", sort=False):
+            chapters.append((len(columns), sub))
             columns.append(grp.to_dict("records"))
-        steps.append((start, len(columns) - 1, step))          # первый и последний столбец этапа
+        if len(columns) == start:
+            continue                                           # пустой этап не рисуем
+        steps.append((start, len(columns) - 1, stage))         # первый и последний столбец этапа
         columns.append(None)                                   # отступ между этапами
     columns.pop()
 
@@ -377,11 +228,11 @@ def render_tracker(df, out_path, scale=0.7):
     x_max = max(n_cols + 3.2, draw_legend(None, x=0, y=legend_y, s=s))   # справа место под градусник (и легенду, если она длиннее)
     fig, ax = plt.subplots(figsize=((x_max + 0.4) * 0.33 * s + 0.3, (n_rows + 12) * 0.33 * s))
 
-    for first, last, step in steps:                            # контейнеры этапов + названия
+    for first, last, stage in steps:                           # контейнеры этапов + названия
         ax.add_patch(FancyBboxPatch((first - 0.15, TITLE_Y - 1.0), last - first + 1.3, n_rows - TITLE_Y + 1.1,
                                     boxstyle="round,pad=0,rounding_size=0.5",
                                     facecolor="#f6f8fa", edgecolor="#d0d7de", linewidth=1, zorder=0))
-        ax.text((first + last + 1) / 2, TITLE_Y, step.upper(), ha="center", va="center",
+        ax.text((first + last + 1) / 2, TITLE_Y, stage.upper(), ha="center", va="center",
                 fontsize=10 * s, fontweight="bold", color="#24292f")
 
     for x, name in chapters:                                   # подписи разделов — вплотную над своими кубиками
@@ -390,8 +241,8 @@ def render_tracker(df, out_path, scale=0.7):
 
     for x, col in enumerate(columns):                          # кубики со слоями
         for y, t in enumerate(col or []):
-            draw_cube(ax, x, y, t["share"], todo=t["todo"],
-                      missing=t["header"] == "missing", broken=t["test_run"] == 1, s=s)
+            draw_cube(ax, x, y, t["share"], undone=t["undone"], in_progress=t["status"] == "in_progress",
+                      missing=t["status"] not in LEARNED, broken=t["test_run"] == 1, s=s)
 
     draw_legend(ax, x=0, y=legend_y, s=s)
 
@@ -426,16 +277,16 @@ def draw_badge(ax, cx, cy, sign, color, s):
             fontweight="bold", color="white", zorder=5)
 
 
-def draw_cube(ax, x, y, share, todo=0, missing=False, broken=False, s=0.7):
-    """Кубик темы: цвет (повторения) → тонкая штриховка (не сделано) → значки «?» и «!» в разных углах."""
+def draw_cube(ax, x, y, share, undone=0, in_progress=False, missing=False, broken=False, s=0.7):
+    """Кубик темы: цвет (повторения) → штриховка (не сделано) → оранжевая рамка (in_progress) → значки «?» и «!»."""
     x0, y0, size = x + 0.08, y + 0.08, 0.84
     face = CMAP(float(share))                                  # float: CMAP(1) с целым — это индекс, а не 100%
     cube = FancyBboxPatch((x0, y0), size, size, boxstyle="round,pad=0,rounding_size=0.18",
                           facecolor=face, edgecolor="none", zorder=1)
     ax.add_patch(cube)
 
-    if todo:                                                   # 1. тонкая диагональная решётка, 4 уровня густоты
-        step = size / (todo + 1.5)                             # чем больше несделанного, тем чаще линии
+    if undone:                                                 # 1. тонкая диагональная решётка, 4 уровня густоты
+        step = size / (undone + 1.5)                           # чем больше несделанного, тем чаще линии
         color = hatch_color(face)
         for c in np.arange(-size, size, step) + step / 2:      # линии под 45° в обе стороны → решётка «x»
             for sign in (1, -1):
@@ -444,14 +295,17 @@ def draw_cube(ax, x, y, share, todo=0, missing=False, broken=False, s=0.7):
                 line, = ax.plot(xs, ys, color=color, linewidth=0.35 * s, zorder=2, solid_capstyle="butt")
                 line.set_clip_path(cube)                       # обрезаем по скруглённому кубику
 
-    if missing:                                                # 2. «?» в левом верхнем углу — нет статуса в шапке
+    if in_progress:                                            # 2. оранжевая рамка — тема в работе
+        ax.add_patch(FancyBboxPatch((x0, y0), size, size, boxstyle="round,pad=0,rounding_size=0.18",
+                                    facecolor="none", edgecolor=IN_PROGRESS_COLOR, linewidth=1.6 * s, zorder=3))
+    if missing:                                                # 3. «?» в левом верхнем углу — нет статуса в шапке
         draw_badge(ax, x0 + 0.2, y0 + 0.2, "?", MISSING_COLOR, s)
-    if broken:                                                 # 3. «!» в правом верхнем углу — тест сломан
+    if broken:                                                 # 4. «!» в правом верхнем углу — тест сломан
         draw_badge(ax, x0 + size - 0.2, y0 + 0.2, "!", BROKEN_COLOR, s)
 
 
 def draw_legend(ax, x, y, s):
-    """Компактная легенда в одну строку: штриховка, «!», «?». Возвращает правый край.
+    """Компактная легенда в одну строку: штриховка, рамка, «!», «?». Возвращает правый край.
     С ax=None ничего не рисует — только считает ширину (нужно заранее для размера картинки)."""
     def cube(px, **layers):
         if ax is not None:
@@ -463,12 +317,14 @@ def draw_legend(ax, x, y, s):
         return px + len(text) * 0.22 + 1.2                     # грубая оценка ширины текста в клетках + отступ
 
     for k in range(1, 5):                                      # четыре уровня штриховки на сером фоне
-        cube(x + k - 1, todo=k)
+        cube(x + k - 1, undone=k)
     x = label(x + 4.2, "не сделано 1–4 из: learned, readme, experiment, test")
+    cube(x, undone=3, in_progress=True)
+    x = label(x + 1.2, "in_progress")
     cube(x, share=0.5, broken=True)
     x = label(x + 1.2, "тест сломан (test_run = 1)")
     cube(x, share=0.5, missing=True)
-    return label(x + 1.2, "нет статуса в шапке (header = missing)")
+    return label(x + 1.2, "нет статуса в шапке")
 
 
 def draw_thermometer(ax, x, top, bottom, s, width=0.75):
@@ -505,12 +361,13 @@ def file_link(path):
 
 
 def topics_table(g):
-    """Таблица тем: тема · этап · файл · где применяется."""
+    """Таблица тем: тема · этап / подраздел · файл · где применяется."""
     if g.empty:
         return "_Пока пусто._\n"
-    lines = ["| Тема | Этап | Файл | Где применяется |", "|---|---|---|---|"]
+    lines = ["| Тема | Этап / подраздел | Файл | Где применяется |", "|---|---|---|---|"]
     for _, t in g.iterrows():
-        lines.append(f"| {cell(t['topic'])} | {t['step']} | {file_link(t['path'])} | {cell(t['description']) or '—'} |")
+        lines.append(f"| {t['slug']} | {t['stage']} / {t['subsection']} | {file_link(t['path'])} | "
+                     f"{cell(t['description']) or '—'} |")
     return "\n".join(lines) + "\n"
 
 
@@ -521,68 +378,63 @@ def build_readme(df):
     total = summary.iloc[-1]
     out = ["# ROADMAP-ML", "",
            "Мой личный трекер пути в ML: что уже изучено, что в работе, что впереди и где сейчас проблемы.",
-           "Этот файл собирается сам из `roadmap_tracker.csv` скриптом `scripts/update_progress.py` — руками не править.",
+           "Этот файл собирается сам из `src/` скриптом `scripts/update_progress.py` — руками не править.",
            "", START, "![ROADMAP-ML progress](assets/progress.png)", END, "",
            "## Прогресс", "",
-           f"**Готовность: {total['готовность, %']}%** · изучено {total['изучено']} из {total['тем']} тем · "
-           f"в работе {total['в работе']} · в планах {total['в планах']} · "
-           f"закреплено повторениями: {total['повторения, %']}%", "",
-           "| Этап | Тем | Изучено | В работе | В планах | Готовность | Повторения |",
+           f"**Готовность: {total['готовность, %']:g}%** · ready {total['ready']} из {total['тем']} тем · "
+           f"in_progress {total['in_progress']} · todo {total['todo']} · "
+           f"закреплено повторениями: {total['повторения, %']:g}%", "",
+           "| Этап | Тем | ready | in_progress | todo | Готовность | Повторения |",
            "|---|---:|---:|---:|---:|---:|---:|"]
     for _, r in summary.iterrows():
         name = f"**{r['этап']}**" if r["этап"] == "всего" else r["этап"]
-        out.append(f"| {name} | {r['тем']} | {r['изучено']} | {r['в работе']} | {r['в планах']} | "
-                   f"{r['готовность, %']}% | {r['повторения, %']}% |")
-    out += ["", "_Готовность — среднее `learned` (изучено = 1, в работе = 0.5, в планах = 0). "
-                "Повторения — `repeated` / 4, по ним красятся кубики на картинке._", ""]
+        out.append(f"| {name} | {r['тем']} | {r['ready']} | {r['in_progress']} | {r['todo']} | "
+                   f"{r['готовность, %']:g}% | {r['повторения, %']:g}% |")
+    out += ["", "_Готовность — среднее `learned` (ready = 1, in_progress = 0.5, todo = 0). "
+                "Повторения — `repeated` / 4, по ним красятся кубики на картинке. "
+                "Динамика — в `progress_history.csv`._", ""]
 
     out += ["## Изучено", "", topics_table(d[d["learned"] == 1]),
-            "## В работе", "", "_Код уже есть, но статус в шапке ещё не `ready`._", "",
-            topics_table(d[d["learned"] == 0.5]),
-            "## Планы", "", "_Что ещё предстоит выучить: файл заведён, но кода пока нет (или файла нет совсем)._", ""]
-    plans = d[d["learned"] == 0]
-    for step in ORDER:
-        g = plans[plans["step"] == step]
+            "## В работе", "", topics_table(d[d["status"] == "in_progress"]),
+            "## Планы", "", "_Статус `todo` — ещё предстоит выучить._", ""]
+    plans = d[d["status"] == "todo"]
+    for stage in ORDER:
+        g = plans[plans["stage"] == stage]
         if g.empty:
             continue
-        out.append(f"<details><summary><b>{step}</b> — {len(g)}</summary>\n")
-        for chapter, cg in g.groupby("chapter", sort=False):
-            out.append(f"- **{chapter.split('/')[-1]}**: " + ", ".join(cell(t) for t in cg["topic"]))
+        out.append(f"<details><summary><b>{stage}</b> — {len(g)}</summary>\n")
+        for sub, sg in g.groupby("subsection", sort=False):
+            out.append(f"- **{sub}**: " + ", ".join(sg["slug"]))
         out += ["", "</details>", ""]
 
-    no_header = d[d["header"] == "missing"]
+    no_status = d[~d["status"].isin(LEARNED)]
     broken = d[d["test_run"] == 1]
-    no_file = d[d["path"] == ""]
     out += ["## Проблемы", ""]
-    if no_header.empty and broken.empty and no_file.empty:
+    if no_status.empty and broken.empty:
         out += ["_Проблем нет._", ""]
     if not broken.empty:
         out += [f"**`!` Сломан тест — {len(broken)}**", ""]
-        out += [f"- {cell(t['topic'])} — {file_link(t['path'])}" for _, t in broken.iterrows()] + [""]
-    if not no_header.empty:
-        out += [f"<details><summary><b><code>?</code> Нет строки <code>status</code> в шапке — {len(no_header)}</b>"
-                f"</summary>\n"]                               # список длинный — сворачиваем
-        out += [f"- {cell(t['topic'])} — {file_link(t['path'])}" for _, t in no_header.iterrows()]
-        out += ["", "</details>", ""]
-    if not no_file.empty:
-        out += [f"**Нет файла: slug не совпал ни с одним файлом или папкой — {len(no_file)}** "
-                f"(впишите правильный `slug` в таблицу)", ""]
-        out += [f"- {cell(t['topic'])} — `{t['chapter']}`" for _, t in no_file.iterrows()] + [""]
+        out += [f"- {t['slug']} — {file_link(t['path'])}" for _, t in broken.iterrows()] + [""]
+    if not no_status.empty:
+        out += [f"**`?` Нет или неверный `status` в шапке — {len(no_status)}**", ""]
+        out += [f"- {t['slug']} — {file_link(t['path'])}" for _, t in no_status.iterrows()] + [""]
     return "\n".join(out).rstrip() + "\n"
 
 
 # ───────────────────────────── запуск ─────────────────────────────
 
 def main(root=ROOT, verbose=True, pytest=False):
-    """Полный цикл. Возвращает таблицу, строки лога и список созданных файлов (удобно для ноутбука).
+    """Полный цикл. Возвращает таблицу и строки лога (удобно для ноутбука).
     pytest=True — прогнать тесты и проставить test_run по факту, иначе test_run берётся из таблицы."""
     root = Path(root).resolve()
     csv_path, log_path = root / "roadmap_tracker.csv", root / "logs" / "progress.log"
-    df = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str, keep_default_na=False)   # всё как текст — ручные поля не портим
-    log, created = [], []
+    old = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str, keep_default_na=False) \
+        if csv_path.exists() else pd.DataFrame(columns=COLUMNS)   # старая таблица нужна только ради ручных полей
+    log = []
     test_results = run_pytest(root, log) if pytest else None
-    df = sync_table(root, df, log, created, test_results)
+    df = build_table(root, old, log, test_results)
     df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+    append_history(root, df, log)
 
     log_path.parent.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -595,10 +447,10 @@ def main(root=ROOT, verbose=True, pytest=False):
         for line in log:
             if not line.startswith("INFO"):
                 print(line)
-        print(disk_report(root, df).to_string(index=False))
-        print(f"Готово: roadmap_tracker.csv, logs/progress.log, assets/progress.png, README.md "
-              f"(создано файлов: {len(created)}, предупреждений: {sum(l.startswith('WARN') for l in log)})")
-    return df, log, created
+        print(stage_summary(df).to_string(index=False))
+        print(f"Готово: roadmap_tracker.csv, progress_history.csv, logs/progress.log, assets/progress.png, README.md "
+              f"(тем: {len(df)}, предупреждений: {sum(l.startswith('WARN') for l in log)})")
+    return df, log
 
 
 if __name__ == "__main__":

@@ -1,3 +1,7 @@
+# path: src/losses/classification/log_loss.py
+# status: in_progress
+# description:
+
 # src/losses/classification/log_loss/log_loss.py
 
 import numpy as np
