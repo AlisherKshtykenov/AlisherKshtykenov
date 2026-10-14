@@ -1,8 +1,8 @@
 """Собирает трекер ROADMAP-ML из архитектуры src/: таблица, карта прогресса, радар, история и README-визитка.
 
 Запуск из корня репозитория:  python scripts/update_progress.py [--skip-tests]
-Структура: src/<этап>/<подраздел>/<метод>.py  или  src/<этап>/<подраздел>/<метод>/<метод>.py
-Повтор = файл attempts/<slug>_attempt_NN.py, прошедший тест tests/**/test_<slug>.py.
+Тема — всегда папка: src/<этап>/<подраздел>/<тема>/ с <тема>.py, README.md, test_<тема>.py, attempts/, __init__.py.
+Повтор = attempts/attempt_NN.py, прошедший test_<тема>.py.
 """
 import argparse
 import re
@@ -23,25 +23,20 @@ from matplotlib.patches import Circle, FancyBboxPatch
 from matplotlib.colors import LinearSegmentedColormap, to_rgb
 
 ROOT = Path(__file__).resolve().parents[1]                     # корень репо (скрипт лежит в scripts/)
-ORDER = ["eda", "preprocessing", "model", "activations", "losses", "optimizers", "metrics"]   # этапы = папки src/
+ORDER = ["eda", "preprocessing", "model", "layers", "activations", "losses", "optimizers", "metrics"]   # этапы = папки src/
 FULL = 10                                                      # 10 засчитанных повторений = 100% цвета
 CMAP = LinearSegmentedColormap.from_list(                      # плавная шкала: серый → тёмно-зелёный
     "progress", ["#ebedf0", "#9be9a8", "#40c463", "#30a14e", "#216e39"])
 LABEL_TOP, TITLE_Y = -0.35, -8.6                               # где подписи разделов и названия этапов (над кубиками)
 
 COLUMNS = ["stage", "subsection", "slug", "path", "description", "status", "learned",
-           "repeated", "last_repeat", "score", "readme", "experiment", "test_create", "test_run"]
+           "repeated", "last_repeat", "score", "readme", "test_create", "test_run"]
 FROM_TESTS = ["repeated", "last_repeat", "score", "test_run"]   # считаются прогоном тестов; с --skip-tests — из старой таблицы
 LEARNED = {"todo": 0, "in_progress": 0.5, "ready": 1, "готов": 1, "done": 1}   # статус → learned
-TASKS = ["learned", "readme", "experiment", "test"]            # четыре задачи по теме
-REQUIRED = {"model": ["learned", "readme", "experiment", "test"],               # обязательные задачи этапа
-            "eda": ["learned", "readme", "experiment"],                         # эксперимент = применено в ноутбуке
-            "preprocessing": ["learned", "readme", "experiment"],
-            "activations": ["learned", "readme", "test"], "losses": ["learned", "readme", "test"],
-            "optimizers": ["learned", "readme", "test"], "metrics": ["learned", "readme", "test"]}
-SKIP_DIRS = {"attempts", "__pycache__"}                        # черновики и кэш — не методы
+TASKS = ["ready", "readme", "test"]                            # задачи по теме: статус ready, README расписан, тест есть
+REQUIRED = {"eda": ["ready", "readme"], "preprocessing": ["ready", "readme"]}   # здесь тест не обязателен; остальным — все три
+SKIP_DIRS = {"attempts", "__pycache__"}                        # попытки и кэш — не темы и не подразделы
 HISTORY_COLS = ["datetime", "всего"] + ORDER                   # progress_history.csv
-IMPL_RE = re.compile(r"""^IMPL\s*=\s*\(\s*["']([^"']+)["']""", re.MULTILINE)   # строка IMPL = ("src/...py", ...) в тесте
 
 BROKEN_COLOR = "#cf222e"                                       # значок «!» (тест сломан) — красный
 MISSING_COLOR = "#8250df"                                      # значок «?» (нет статуса) — фиолетовый
@@ -75,31 +70,57 @@ def read_header(text):
 
 
 def scan_src(root, log):
-    """Все методы из src/<этап>/<подраздел>/. Неожиданная вложенность и папки без <метод>.py — в лог."""
+    """Все темы: папки src/<этап>/<подраздел>/<тема>/ с <тема>.py. Всё остальное на этом уровне — в лог."""
     methods = []
+    known = set(ORDER)
+    for extra in sorted(d.name for d in (root / "src").iterdir() if d.is_dir() and d.name not in known
+                        and d.name not in SKIP_DIRS and not d.name.startswith(("_", "."))):
+        log.append(f"WARN  src/{extra}/: этап не в списке ORDER — на карту не попадает")
     for stage in ORDER:
         stage_dir = root / "src" / stage
         if not stage_dir.is_dir():
             continue
-        for sub in sorted(d for d in stage_dir.iterdir() if d.is_dir() and d.name not in SKIP_DIRS):
+        for sub in sorted(d for d in stage_dir.iterdir() if d.is_dir() and d.name not in SKIP_DIRS
+                          and not d.name.startswith(("_", "."))):
             for item in sorted(sub.iterdir()):
                 if item.name in SKIP_DIRS or item.name.startswith(("_", ".")):
                     continue
-                if item.is_file() and item.suffix == ".py":    # плоский метод: .../output/sigmoid.py
-                    py, method_dir = item, None
-                elif item.is_dir() and (item / f"{item.name}.py").is_file():   # папка метода: .../knn/knn.py
-                    py, method_dir = item / f"{item.name}.py", item
-                elif item.is_dir():
-                    log.append(f"WARN  {item.relative_to(root).as_posix()}/: папка без {item.name}.py — "
-                               f"не метод (лишняя вложенность?)")
-                    continue
-                else:
-                    continue                                   # README.md и прочие файлы подраздела
-                meta = read_header(py.read_text(encoding="utf-8", errors="replace"))
-                methods.append(Method(stage=stage, subsection=sub.name, slug=py.stem,
-                                      path=py.relative_to(root).as_posix(), method_dir=method_dir,
-                                      status=meta.get("status", "").lower(), description=meta.get("description", "")))
+                rel = item.relative_to(root).as_posix()
+                if item.is_file():
+                    if item.suffix == ".py":                   # файл-тема без папки — старый формат
+                        log.append(f"WARN  {rel}: тема должна быть папкой {item.stem}/ — файл пропущен")
+                    continue                                   # README.md и прочее у подраздела
+                py = item / f"{item.name}.py"
+                for made in scaffold(root, item):              # новая папка-тема → недостающий каркас
+                    log.append(f"NEW   {rel}/{made}: создан каркас темы")
+                text = py.read_text(encoding="utf-8", errors="replace")
+                meta = read_header(text)
+                status = meta.get("status", "").lower() or ("todo" if not text.strip() else "")   # пустой файл = todo
+                methods.append(Method(stage=stage, subsection=sub.name, slug=item.name,
+                                      path=py.relative_to(root).as_posix(), method_dir=item,
+                                      status=status, description=meta.get("description", "")))
     return methods
+
+
+def scaffold(root, topic):
+    """Дозаполняет папку темы: <тема>.py (status: todo), README.md, attempts/.gitkeep, __init__.py.
+    Существующие файлы не трогает. Возвращает список созданного."""
+    made, py = [], topic / f"{topic.name}.py"
+    if not py.exists():
+        py.write_text(f"# path: {py.relative_to(root).as_posix()}\n# status: todo\n# description:\n", encoding="utf-8")
+        made.append(py.name)
+    if not (topic / "README.md").exists():
+        (topic / "README.md").write_text("", encoding="utf-8")
+        made.append("README.md")
+    attempts = topic / "attempts"
+    attempts.mkdir(exist_ok=True)
+    if not any(p.name != ".DS_Store" for p in attempts.iterdir()):
+        (attempts / ".gitkeep").write_text("", encoding="utf-8")   # git не хранит пустые папки
+        made.append("attempts/.gitkeep")
+    if not (topic / "__init__.py").exists():
+        (topic / "__init__.py").write_text("", encoding="utf-8")   # экспорт впишу сам, когда появится код
+        made.append("__init__.py")
+    return made
 
 
 def readme_has_text(folder):
@@ -113,31 +134,15 @@ def readme_has_text(folder):
 
 # ───────────────────────────── тесты и повторы ─────────────────────────────
 
-def attempt_files(etalon):
-    """Попытки к эталону: <slug>_attempt_*.py из attempts/ метода → подраздела → этапа (как в tests/conftest.py)."""
-    slug = etalon.stem
-    method_dir = etalon.parent if etalon.parent.name == slug else None   # папка метода есть только у .../<slug>/<slug>.py
-    subsection = etalon.parent.parent if method_dir else etalon.parent
-    found = {}
-    for folder in (method_dir, subsection, subsection.parent):
-        if folder is not None:
-            for path in sorted((folder / "attempts").glob(f"{slug}_attempt_*.py")):
-                found.setdefault(path.name, path)              # одноимённая попытка — берём самую «близкую»
-    return list(found.values())
+def attempt_files(topic_dir):
+    """Попытки темы: attempts/attempt_NN.py в папке темы (как в src/conftest.py)."""
+    return sorted((topic_dir / "attempts").glob("attempt_*.py"))
 
 
-def test_key(root, test):
-    """Чей это тест: путь эталона из строки IMPL, иначе «slug:<этап>:<slug>» по имени и папке теста."""
-    m = IMPL_RE.search(test.read_text(encoding="utf-8", errors="replace"))
-    if m:
-        return m.group(1)
-    parts = test.relative_to(root / "tests").parts
-    return f"slug:{parts[0] if len(parts) > 1 else ''}:{test.stem.removeprefix('test_')}"
-
-
-def find_test(results, m):
-    """Результат теста для метода: по пути эталона, иначе по этапу и slug."""
-    return results.get(m.path) or results.get(f"slug:{m.stage}:{m.slug}") or results.get(f"slug::{m.slug}")
+def test_file(m):
+    """Тест темы: test_<тема>.py в её папке (или None)."""
+    path = m.method_dir / f"test_{m.slug}.py"
+    return path if path.is_file() else None
 
 
 def junit_cases(xml):
@@ -152,15 +157,17 @@ def junit_cases(xml):
     return cases
 
 
-def run_tests(root, log, run=True):
-    """Гоняет каждый tests/**/test_*.py отдельно. {ключ эталона: {file, etalon_failed, passed_attempts, failed}}.
+def run_tests(root, methods, log, run=True):
+    """Гоняет test_<тема>.py каждой темы отдельно. {путь эталона: {file, etalon_failed, passed_attempts, failed}}.
     run=False — только найти тесты, не запуская (для --skip-tests)."""
     results = {}
-    tests = sorted((root / "tests").rglob("test_*.py")) if (root / "tests").is_dir() else []
-    for test in tests:
+    for m in methods:
+        test = test_file(m)
+        if test is None:
+            continue
         rel = test.relative_to(root).as_posix()
         res = {"file": rel, "etalon_failed": False, "passed_attempts": [], "failed": []}
-        results[test_key(root, test)] = res
+        results[m.path] = res
         if not run:
             continue
         with tempfile.TemporaryDirectory() as tmp:
@@ -204,7 +211,7 @@ def repeats(root, m, res, today):
     """Повторы метода: (сколько попыток прошло тест, дата последней, итог со штрафом за простой)."""
     if not res or not res["passed_attempts"]:
         return 0, "", 0                                        # нет попыток или ни одна не прошла — серый кубик
-    by_stem = {p.stem: p for p in attempt_files(root / m.path)}
+    by_stem = {p.stem: p for p in attempt_files(m.method_dir)}
     paths = [by_stem[s] for s in res["passed_attempts"] if s in by_stem]
     if not paths:
         return 0, "", 0
@@ -215,7 +222,7 @@ def repeats(root, m, res, today):
 
 # ───────────────────────────── таблица ─────────────────────────────
 
-def build_table(root, old, log, results, ran_tests=True, today=None):
+def build_table(root, old, log, methods, results, ran_tests=True, today=None):
     """Пересобирает таблицу из src/. Без прогона тестов повторы и test_run берёт из старой таблицы по path."""
     today = today or date.today()
     kept = old.set_index("path")[[c for c in FROM_TESTS if c in old.columns]].to_dict("index") \
@@ -223,25 +230,23 @@ def build_table(root, old, log, results, ran_tests=True, today=None):
     order = {p: i for i, p in enumerate(old["path"])} if "path" in old.columns else {}   # прежний порядок строк
 
     rows = []
-    for m in scan_src(root, log):
+    for m in methods:
         if m.status not in LEARNED:
             log.append(f"WARN  {m.path}: " + (f"неизвестный статус «{m.status}» (ожидается todo / in_progress / ready)"
                                               if m.status else "статус отсутствует (нет строки `# status:` в шапке)"))
-        res = find_test(results, m)
+        res = results.get(m.path)
         if ran_tests:
             repeated, last_repeat, score = repeats(root, m, res, today)
             test_run = int(bool(res and res["etalon_failed"]))
         else:
             k = kept.get(m.path, {})
             repeated, last_repeat, score, test_run = (k.get(c, d) for c, d in zip(FROM_TESTS, (0, "", 0, 0)))
-        exp_dir = root / "experiments" / m.slug
         rows.append({"stage": m.stage, "subsection": m.subsection, "slug": m.slug, "path": m.path,
                      "description": m.description, "status": m.status,
                      "learned": LEARNED.get(m.status, 0),       # learned — только из статуса
                      "repeated": repeated, "last_repeat": last_repeat, "score": score,
                      "readme": readme_has_text(m.method_dir),
-                     "experiment": int(exp_dir.is_dir() and any(exp_dir.glob("*.ipynb"))),
-                     "test_create": int(res is not None),
+                     "test_create": int(test_file(m) is not None),
                      "test_run": test_run})
     df = pd.DataFrame(rows, columns=COLUMNS).astype(object)
     df["learned"] = [f"{v:g}" for v in df["learned"]]          # 0 / 0.5 / 1, а не 0.0
@@ -266,10 +271,9 @@ def build_table(root, old, log, results, ran_tests=True, today=None):
 def numeric(df):
     """Копия таблицы с числами + undone (сколько ОБЯЗАТЕЛЬНЫХ для этапа задач не сделано) и share (доля цвета)."""
     df = df.copy()
-    for col in ["learned", "repeated", "score", "readme", "experiment", "test_create", "test_run"]:
+    for col in ["learned", "repeated", "score", "readme", "test_create", "test_run"]:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
-    done = {"learned": df["learned"] >= 1, "readme": df["readme"] == 1,
-            "experiment": df["experiment"] == 1, "test": df["test_create"] == 1}   # сделана ли каждая задача
+    done = {"ready": df["learned"] >= 1, "readme": df["readme"] == 1, "test": df["test_create"] == 1}
     df["undone"] = [sum(not done[task][i] for task in REQUIRED.get(stage, TASKS))   # только обязательные для этапа
                     for i, stage in zip(df.index, df["stage"])]
     df["share"] = df["score"].clip(upper=FULL) / FULL                         # итог повторов со штрафом → доля 0..1
@@ -299,9 +303,13 @@ def append_history(root, df, log):
            **{c: summary.get(c, 0.0) for c in HISTORY_COLS[1:]}}
     if path.exists():
         hist = pd.read_csv(path, encoding="utf-8-sig")
-        if len(hist) and all(abs(float(hist.iloc[-1][c]) - float(row[c])) < 1e-9 for c in HISTORY_COLS[1:]):
+        if len(hist) and all(c in hist.columns and abs(float(hist.iloc[-1][c]) - float(row[c])) < 1e-9
+                             for c in HISTORY_COLS[1:]):
             log.append("INFO  progress_history.csv: проценты не изменились — строка не дописана")
             return False
+        if list(hist.columns) != HISTORY_COLS:                 # появился новый этап: шапка шире, старые строки те же
+            hist.reindex(columns=HISTORY_COLS).to_csv(path, index=False, encoding="utf-8-sig")
+            log.append("INFO  progress_history.csv: добавлены столбцы новых этапов (старые строки сохранены)")
     pd.DataFrame([row], columns=HISTORY_COLS).to_csv(path, mode="a", header=not path.exists(),
                                                      index=False, encoding="utf-8-sig")   # только дописываем
     log.append(f"INFO  progress_history.csv: дописана строка (всего {row['всего']}%)")
@@ -419,9 +427,9 @@ def draw_legend(ax, x, y, s):
             ax.text(px, y + 0.5, text, ha="left", va="center", fontsize=8 * s, color="#57606a")
         return px + len(text) * 0.25 + 1.2                     # грубая оценка ширины текста в клетках + отступ
 
-    for k in range(1, 5):                                      # четыре уровня штриховки на сером фоне
+    for k in range(1, 4):                                      # три уровня штриховки на сером фоне
         cube(x + k - 1, undone=k)
-    x = label(x + 4.2, "не сделано обязательных задач этапа: 1–4")
+    x = label(x + 3.2, "не сделано обязательных задач: 1–3")
     cube(x, undone=3, in_progress=True)
     x = label(x + 1.2, "in_progress")
     cube(x, share=0.5, broken=True)
@@ -535,7 +543,7 @@ def radar_values(df):
 # ───────────────────────────── README-визитка ─────────────────────────────
 
 START, END = "<!-- progress:start -->", "<!-- progress:end -->"
-TITLES = {"eda": "EDA", "preprocessing": "Preprocessing", "model": "Model", "activations": "Activations",
+TITLES = {"eda": "EDA", "preprocessing": "Preprocessing", "model": "Model", "layers": "Layers", "activations": "Activations",
           "losses": "Losses", "optimizers": "Optimizers", "metrics": "Metrics"}
 
 
@@ -549,7 +557,7 @@ def build_readme(df):
            "## Как читать карту", "",
            "- Каждый квадрат — тема.",
            "- Ярче зелёный — увереннее владею: больше свежих повторений.",
-           "- Меньше штриховки — полнее проработана: теория, конспект, эксперимент, тест.",
+           "- Меньше штриховки — полнее проработана: теория закрыта, конспект расписан, тест написан.",
            "- Оранжевая рамка — в работе сейчас.", "",
            "## Карта прогресса", "", START, "![ROADMAP-ML progress](assets/progress.png)", END, "",
            "## Радар навыков", "", "![Радар навыков](assets/radar.png)", "",
@@ -585,8 +593,9 @@ def main(root=ROOT, verbose=True, skip_tests=False):
     old = pd.read_csv(csv_path, encoding="utf-8-sig", dtype=str, keep_default_na=False) \
         if csv_path.exists() else pd.DataFrame(columns=COLUMNS)   # старая таблица нужна ради порядка строк и --skip-tests
     log = []
-    results = run_tests(root, log, run=not skip_tests)
-    df = build_table(root, old, log, results, ran_tests=not skip_tests)
+    methods = scan_src(root, log)
+    results = run_tests(root, methods, log, run=not skip_tests)
+    df = build_table(root, old, log, methods, results, ran_tests=not skip_tests)
     df.to_csv(csv_path, index=False, encoding="utf-8-sig")
     append_history(root, df, log)
 
@@ -601,7 +610,7 @@ def main(root=ROOT, verbose=True, skip_tests=False):
     if verbose:
         for line in log:
             if not line.startswith("INFO"):
-                print(line)
+                print(line)                                    # WARN, FAIL и NEW (создан каркас)
         print(stage_summary(df).to_string(index=False))
         print(f"Готово: roadmap_tracker.csv, progress_history.csv, logs/progress.log, assets/progress.png, "
               f"assets/radar.png, README.md (тем: {len(df)}, предупреждений: {sum(l.startswith('WARN') for l in log)})")

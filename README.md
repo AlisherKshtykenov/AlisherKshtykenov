@@ -9,7 +9,7 @@ ML / Data Science разработчик
 
 - Каждый квадрат — тема.
 - Ярче зелёный — увереннее владею: больше свежих повторений.
-- Меньше штриховки — полнее проработана: теория, конспект, эксперимент, тест.
+- Меньше штриховки — полнее проработана: теория закрыта, конспект расписан, тест написан.
 - Оранжевая рамка — в работе сейчас.
 
 ## Карта прогресса
@@ -40,7 +40,7 @@ logistic_regression · sigmoid · log_loss · batch_gd
 
 </details>
 
-<details><summary><b>Preprocessing</b> — 70</summary>
+<details><summary><b>Preprocessing</b> — 73</summary>
 
 | Подраздел | Темы |
 |---|---|
@@ -53,7 +53,7 @@ logistic_regression · sigmoid · log_loss · batch_gd
 | feature_selection | variance_threshold, correlation, chi2, mutual_information, rfe, forward_selection, backward_elimination, lasso, tree_importance |
 | splitting | holdout, stratified, kfold, stratified_kfold, group_kfold, time_series_split, leave_one_out |
 | imbalance | random_oversampling, smote, adasyn, random_undersampling, tomek_links, class_weights |
-| augmentation | blur, cutout, flip, gaussian_noise, random_crop, rotation |
+| augmentation | blur, cutout, flip, gaussian_noise, random_crop, rotation, color_jitter, cutmix, mixup |
 
 </details>
 
@@ -82,6 +82,22 @@ logistic_regression · sigmoid · log_loss · batch_gd
 | text_classification | bert, lstm |
 | text_to_speech | fastspeech, hifigan, tacotron2, vits |
 | time_series | arima, lstm, prophet |
+
+</details>
+
+<details><summary><b>Layers</b> — 27</summary>
+
+| Подраздел | Темы |
+|---|---|
+| attention | cross_attention, multi_head_attention, positional_encoding, self_attention |
+| connections | dense_connection, residual, skip_concat |
+| convolutional | conv1d, conv2d, depthwise_separable, dilated, transposed_conv |
+| core | dense, flatten |
+| embedding | embedding |
+| normalization | batch_norm, group_norm, instance_norm, layer_norm |
+| pooling | avg_pool, global_avg_pool, max_pool |
+| recurrent | gru, lstm, rnn |
+| regularization | dropout, spatial_dropout |
 
 </details>
 
