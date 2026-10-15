@@ -237,7 +237,7 @@ def build_table(root, old, log, methods, results, ran_tests=True, today=None):
         res = results.get(m.path)
         if ran_tests:
             repeated, last_repeat, score = repeats(root, m, res, today)
-            test_run = int(bool(res and res["etalon_failed"]))
+            test_run = int(bool(res and res["failed"]))       # «!» — упал любой тест темы: эталона или попытки
         else:
             k = kept.get(m.path, {})
             repeated, last_repeat, score, test_run = (k.get(c, d) for c, d in zip(FROM_TESTS, (0, "", 0, 0)))
@@ -318,11 +318,14 @@ def append_history(root, df, log):
 
 # ───────────────────────────── картинка ─────────────────────────────
 
-def render_tracker(df, out_path, scale=0.7):
-    df = numeric(df)
+def render_tracker(df, out_path, scale=0.7, stages=None, title=None):
+    """Карта прогресса. stages — нарисовать только эти этапы (для крупной карты в ноутбуке), title — свой заголовок.
+    out_path — путь к файлу или буфер в памяти (BytesIO)."""
+    full = numeric(df)
+    df = full if stages is None else full[full["stage"].isin(stages)]
 
     columns, chapters, steps = [], [], []
-    for stage in ORDER:
+    for stage in (stages or ORDER):
         start = len(columns)
         for sub, grp in df[df["stage"] == stage].groupby("subsection", sort=False):
             chapters.append((len(columns), sub))
@@ -362,13 +365,14 @@ def render_tracker(df, out_path, scale=0.7):
     ax.set_aspect("equal")
     ax.axis("off")
 
-    progress = df["share"].mean()                              # общий прогресс по всему роадмапу (= overall_progress)
-    ax.set_title(f"ROADMAP-ML · прогресс {progress:.0%}", loc="left",
+    progress = full["share"].mean()                            # общий прогресс по всему роадмапу (= overall_progress)
+    ax.set_title(title or f"ROADMAP-ML · прогресс {progress:.0%}", loc="left",
                  fontsize=14 * s, fontweight="bold", color="#24292f", pad=4)
 
     draw_thermometer(ax, x=n_cols + 0.9, top=TITLE_Y - 1.0, bottom=n_rows + 0.1, s=s)   # градусник справа, на всю высоту контейнеров
 
-    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(out_path, (str, Path)):
+        Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=200, bbox_inches="tight", facecolor="white",
                 metadata={"Software": None})                   # без версии matplotlib — файл не меняется зря
     plt.close(fig)
@@ -577,10 +581,11 @@ def build_readme(df):
 
 
 def problems(df, results):
-    """Для ноутбука: упавшие тесты [(тест, файл)] и файлы без корректного статуса."""
+    """Для ноутбука: упавшие тесты [(тест, файл)], файлы без статуса и засчитанные попытки {путь эталона: [attempt_NN]}."""
     failed = [case for res in results.values() for case in res["failed"]]
     no_status = df.loc[~df["status"].isin(LEARNED), "path"].tolist()
-    return {"failed_tests": failed, "no_status": no_status}
+    passed = {path: res["passed_attempts"] for path, res in results.items() if res["passed_attempts"]}
+    return {"failed_tests": failed, "no_status": no_status, "passed": passed}
 
 
 # ───────────────────────────── запуск ─────────────────────────────
@@ -599,22 +604,31 @@ def main(root=ROOT, verbose=True, skip_tests=False):
     df.to_csv(csv_path, index=False, encoding="utf-8-sig")
     append_history(root, df, log)
 
+    render_tracker(df, root / "assets" / "progress.png")
+    render_radar(radar_values(df), root / "assets" / "radar.png", total=overall_progress(df))   # «всего» = как в заголовке карты
+    (root / "README.md").write_text(build_readme(df), encoding="utf-8")
+    found = problems(df, results)
+    try:
+        import charts                                          # здесь, а не наверху: charts сам импортирует этот модуль
+        charts.save_dashboard(df, found, root, root / "assets" / "dashboard.png")   # все графики одной картинкой
+    except Exception as err:                                   # сводная картинка не должна ломать обновление
+        log.append(f"WARN  assets/dashboard.png не собрана: {err}")
+
     log_path.parent.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_path.write_text(f"# update_progress {stamp}\n" + "\n".join(log) + "\n", encoding="utf-8")   # перезапись при каждом запуске
 
-    render_tracker(df, root / "assets" / "progress.png")
-    render_radar(radar_values(df), root / "assets" / "radar.png", total=overall_progress(df))   # «всего» = как в заголовке карты
-    (root / "README.md").write_text(build_readme(df), encoding="utf-8")
-
-    if verbose:
-        for line in log:
-            if not line.startswith("INFO"):
-                print(line)                                    # WARN, FAIL и NEW (создан каркас)
+    if verbose:                                                # коротко: числа и только упавшие тесты; всё остальное — в лог
+        d = numeric(df)
         print(stage_summary(df).to_string(index=False))
-        print(f"Готово: roadmap_tracker.csv, progress_history.csv, logs/progress.log, assets/progress.png, "
-              f"assets/radar.png, README.md (тем: {len(df)}, предупреждений: {sum(l.startswith('WARN') for l in log)})")
-    return df, log, problems(df, results)
+        print(f"\nТем: {len(df)} · ! упал тест: {int((d['test_run'] == 1).sum())} · "
+              f"? нет статуса: {int((~d['status'].isin(LEARNED)).sum())} · "
+              f"создано каркасов: {sum(l.startswith('NEW') for l in log)}")
+        for line in log:
+            if line.startswith("FAIL") or "dashboard.png не собрана" in line:
+                print(line)
+        print("Картинки: assets/progress.png · assets/radar.png · assets/dashboard.png — подробности в logs/progress.log")
+    return df, log, found
 
 
 if __name__ == "__main__":

@@ -32,15 +32,27 @@ def load(path, name):
 
 
 def pytest_generate_tests(metafunc):
-    """Размножает каждый тест с параметром impl: [etalon] + по одному запуску на каждую попытку."""
-    if "impl" not in metafunc.fixturenames:
+    """Размножает каждый тест: [etalon] + по одному запуску на каждую попытку."""
+    if "impl_path" not in metafunc.fixturenames:               # impl_path — путь к файлу реализации
         return
     etalon, attempts = topic_files(metafunc.module.__file__)
     params = [pytest.param(etalon, id="etalon")] + [pytest.param(p, id=p.stem) for p in attempts]
-    metafunc.parametrize("impl", params, indirect=True)        # indirect — значение готовит фикстура (fixture) ниже
+    metafunc.parametrize("impl_path", params, indirect=True)
 
 
 @pytest.fixture
-def impl(request):
-    """Функция/класс из эталона или попытки. Сломанная попытка падает здесь — только её запуск, не весь файл."""
-    return load(request.param, request.module.IMPL)
+def impl_path(request):
+    """Путь к эталону или попытке — общий для impl и get."""
+    return request.param
+
+
+@pytest.fixture
+def impl(impl_path, request):
+    """Главная функция темы (имя из IMPL) — как раньше."""
+    return load(impl_path, request.module.IMPL)
+
+
+@pytest.fixture
+def get(impl_path):
+    """Достать любую функцию из той же реализации: get("sigmoid_derivative")."""
+    return lambda name: load(impl_path, name)                  # lambda — маленькая функция в одну строку

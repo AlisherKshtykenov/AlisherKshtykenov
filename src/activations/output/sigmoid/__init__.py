@@ -1,1 +1,1 @@
-from .sigmoid import sigmoid
+from .sigmoid import sigmoid, sigmoid_derivative

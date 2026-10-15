@@ -1,3 +1,3 @@
 # path: src/layers/regularization/dropout/dropout.py
-# status: todo
+# status:
 # description:

@@ -1,8 +1,6 @@
 # path: src/activations/output/sigmoid/sigmoid.py
-# status: in_progress
-# description:
-
-# src/activations/output/sigmoid.py
+# status: ready
+# description: Превращает любое число в вероятность от 0 до 1
 
 
 import numpy as np
@@ -14,8 +12,7 @@ def sigmoid(z):
     return 1 / (1 + np.exp(-z))         # сама формула сигмоида
 
 
-if __name__ == "__main__":
-    print(sigmoid(0))                   # 0.5         — ноль баллов = монетка
-    print(sigmoid(10))                  # ~0.99995    — много баллов = почти точно «да»
-    print(sigmoid(-10))                 # ~0.00005    — мало баллов = почти точно «нет»
-    print(sigmoid([-1000, 0, 1000]))    # [0. 0.5 1.] — без предупреждений, clip сработал
+def sigmoid_derivative(z):
+    """Производная сигмоида: насколько сильнее меняется ответ при небольшом сдвиге z."""
+    sigmoid_z = sigmoid(z)      # считаем сигмоиду один раз, чтобы не вызывать exp дважды
+    return sigmoid_z * (1 - sigmoid_z)      # формула σ(z)·(1 − σ(z)), поэлементно для каждого z

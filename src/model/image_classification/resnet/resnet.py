@@ -1,3 +1,3 @@
 # path: src/model/image_classification/resnet/resnet.py
-# status: todo
+# status:
 # description:

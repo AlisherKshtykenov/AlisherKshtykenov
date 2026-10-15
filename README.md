@@ -26,7 +26,7 @@ _Масштаб радара подстраивается под текущий 
 
 ## Сейчас в работе
 
-logistic_regression · sigmoid · log_loss · batch_gd
+logistic_regression · relu · log_loss · batch_gd
 
 ## Темы
 
@@ -40,7 +40,7 @@ logistic_regression · sigmoid · log_loss · batch_gd
 
 </details>
 
-<details><summary><b>Preprocessing</b> — 73</summary>
+<details><summary><b>Preprocessing</b> — 76</summary>
 
 | Подраздел | Темы |
 |---|---|
@@ -54,10 +54,11 @@ logistic_regression · sigmoid · log_loss · batch_gd
 | splitting | holdout, stratified, kfold, stratified_kfold, group_kfold, time_series_split, leave_one_out |
 | imbalance | random_oversampling, smote, adasyn, random_undersampling, tomek_links, class_weights |
 | augmentation | blur, cutout, flip, gaussian_noise, random_crop, rotation, color_jitter, cutmix, mixup |
+| images | loading, normalization, resize |
 
 </details>
 
-<details><summary><b>Model</b> — 71</summary>
+<details><summary><b>Model</b> — 72</summary>
 
 | Подраздел | Темы |
 |---|---|
@@ -73,7 +74,7 @@ logistic_regression · sigmoid · log_loss · batch_gd
 | planning | mcts |
 | face_recognition | arcface, facenet |
 | generative | diffusion, gan, vae |
-| image_classification | efficientnet, resnet, vit |
+| image_classification | efficientnet, resnet, vit, simple_cnn |
 | object_detection | detr, faster_rcnn, yolo |
 | recommender | collaborative_filtering, matrix_factorization, two_tower |
 | segmentation | deeplab, mask_rcnn, unet |
@@ -125,7 +126,7 @@ logistic_regression · sigmoid · log_loss · batch_gd
 
 </details>
 
-<details><summary><b>Optimizers</b> — 24</summary>
+<details><summary><b>Optimizers</b> — 25</summary>
 
 | Подраздел | Темы |
 |---|---|
@@ -135,7 +136,7 @@ logistic_regression · sigmoid · log_loss · batch_gd
 | adam_family | adam, adamw, nadam, adamax, amsgrad, radam |
 | large_scale | lamb, adafactor, lion |
 | second_order | newton, lbfgs |
-| schedulers | step_decay, exponential_decay, cosine_annealing, warmup, reduce_on_plateau |
+| schedulers | step_decay, exponential_decay, cosine_annealing, warmup, reduce_on_plateau, early_stopping |
 
 </details>
 
