@@ -1,11 +1,4 @@
-data/
-models/
-logs/
-
 .ipynb_checkpoints/
-
+__pycache__/
 .venv/
 .idea/
-__pycache__/
-.pytest_cache/
-.DS_Store
