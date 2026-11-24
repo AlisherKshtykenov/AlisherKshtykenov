@@ -8,7 +8,9 @@ The source for the activity images on the profile page (the heatmap, the streak 
 | `count` | contributions that day |
 | `source` | `auto`: filled in by the robot · `manual`: your value, never touched |
 
-**To fix a day**, edit the row on GitHub (the ✏️ button on this file) or locally, set the number and write `manual`:
+This file lives on the **`stats`** branch, so the main page of the repo shows only the README.
+
+**To fix a day**, open [`data/contributions.csv` on the `stats` branch](https://github.com/AlisherKshtykenov/AlisherKshtykenov/blob/stats/data/contributions.csv), press ✏️, set the number and write `manual`:
 
 ```
 2026-11-24,13,manual
@@ -19,4 +21,4 @@ Every 6 hours the robot adds the new day, recounts the last 7 days for `auto` ro
 
 ---
 
-**По-русски.** Здесь лежат данные для графиков активности в профиле. Чтобы поправить день, измени число в строке и поставь `manual`, тогда робот эту строку больше не трогает. Новый день добавляется сам, картинки перерисовываются через пару минут после сохранения.
+**По-русски.** Здесь лежат данные для графиков активности в профиле. Файл лежит в ветке `stats`. Чтобы поправить день, открой его там, нажми ✏️, измени число в строке и поставь `manual`, тогда робот эту строку больше не трогает. Новый день добавляется сам, картинки перерисовываются через пару минут после сохранения.

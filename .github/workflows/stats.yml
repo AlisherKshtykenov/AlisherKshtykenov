@@ -1,13 +1,15 @@
 name: Profile stats
 
-# Recounts recent days into data/contributions.csv and redraws the SVGs on the `output` branch.
-# Runs every 6 hours, first right after midnight in Almaty (new day = new square), and on every CSV edit.
+# Data and scripts live on the `stats` branch, so `main` stays clean (README only).
+# Recounts recent days into data/contributions.csv (on `stats`) and redraws the SVGs on `output`.
+# Runs every 6 hours, first right after midnight in Almaty (new day = new square), and on every
+# edit pushed to the `stats` branch. This file exists on both `main` (schedule) and `stats` (push).
 
 on:
   schedule:
     - cron: "5 1,7,13,19 * * *" # 00:05, 06:05, 12:05, 18:05 in Almaty (UTC+5)
   push:
-    branches: [main]
+    branches: [stats]
     paths: ["data/**", "scripts/**", ".github/workflows/stats.yml"]
   workflow_dispatch:
 
@@ -26,6 +28,8 @@ jobs:
       STATS_TZ: Asia/Almaty
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: stats
 
       - uses: actions/setup-python@v5
         with:
@@ -46,8 +50,8 @@ jobs:
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add data/contributions.csv
             git commit -m "stats: update contributions"
-            git pull --rebase origin main
-            git push origin HEAD:main
+            git pull --rebase origin stats
+            git push origin HEAD:stats
           fi
 
       - name: Render SVGs
