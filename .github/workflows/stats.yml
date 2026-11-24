@@ -1,0 +1,62 @@
+name: Profile stats
+
+# Recounts recent days into data/contributions.csv and redraws the SVGs on the `output` branch.
+# Runs every 6 hours (so today's square fills in during the day) and whenever you edit the CSV.
+
+on:
+  schedule:
+    - cron: "5 */6 * * *"
+  push:
+    branches: [main]
+    paths: ["data/**", "scripts/**", ".github/workflows/stats.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: profile-stats
+  cancel-in-progress: false
+
+jobs:
+  stats:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      STATS_TZ: Asia/Almaty
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Update CSV
+        env:
+          # Optional: add a fine-grained PAT (read-only "Contents" + "Metadata" on all repos)
+          # as the GH_STATS_TOKEN secret to also count private repos. Without it: public only.
+          GH_STATS_TOKEN: ${{ secrets.GH_STATS_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/stats.py update --days 7
+
+      - name: Commit CSV
+        run: |
+          if ! git diff --quiet data/; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/contributions.csv
+            git commit -m "stats: update contributions"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+      - name: Render SVGs
+        run: python scripts/stats.py render --out dist
+
+      - uses: crazy-max/ghaction-github-pages@v4
+        with:
+          target_branch: output
+          build_dir: dist
+          keep_history: false
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

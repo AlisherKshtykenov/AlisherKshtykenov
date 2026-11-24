@@ -124,20 +124,27 @@ class Alisher:
 ### 📈 Activity
 
 <p align="center">
-  <img src="https://streak-stats.demolab.com/?user=AlisherKshtykenov&theme=dark&hide_border=true&background=0D1117&ring=D97742&fire=D97742&currStreakLabel=D97742" alt="GitHub streak" height="170">
-</p>
-
-<p align="center">
-  <img src="https://github-readme-activity-graph.vercel.app/graph?username=AlisherKshtykenov&bg_color=0d1117&color=f0e6dc&line=d97742&point=fff4e8&area=true&area_color=7a3b16&hide_border=true" alt="Contribution graph" width="95%">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/AlisherKshtykenov/AlisherKshtykenov/output/streak-dark.svg">
+    <img alt="Contribution streak" src="https://raw.githubusercontent.com/AlisherKshtykenov/AlisherKshtykenov/output/streak.svg" width="495">
+  </picture>
 </p>
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/AlisherKshtykenov/AlisherKshtykenov/output/github-snake-dark.svg">
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/AlisherKshtykenov/AlisherKshtykenov/output/github-snake.svg">
-    <img alt="Contribution snake" src="https://raw.githubusercontent.com/AlisherKshtykenov/AlisherKshtykenov/output/github-snake.svg">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/AlisherKshtykenov/AlisherKshtykenov/output/heatmap-dark.svg">
+    <img alt="Contribution heatmap" src="https://raw.githubusercontent.com/AlisherKshtykenov/AlisherKshtykenov/output/heatmap.svg" width="100%">
   </picture>
 </p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/AlisherKshtykenov/AlisherKshtykenov/output/graph-dark.svg">
+    <img alt="Contributions in the last 30 days" src="https://raw.githubusercontent.com/AlisherKshtykenov/AlisherKshtykenov/output/graph.svg" width="100%">
+  </picture>
+</p>
+
+<sub><p align="center">Self-hosted stats from <a href="data/contributions.csv">data/contributions.csv</a>, redrawn every 6 hours.</p></sub>
 
 <details>
 <summary>🇷🇺 <b>Коротко по-русски</b></summary>
