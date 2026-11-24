@@ -31,9 +31,9 @@ TZ = ZoneInfo(os.environ.get("STATS_TZ", "Asia/Almaty"))
 
 THEMES = {
     "dark": dict(bg="#0d1117", border="#30363d", empty="#161b22", text="#8b949e", title="#f0e6dc",
-                 accent="#d97742", levels=["#3b1f0e", "#7a3b16", "#b5612a", "#d97742"]),
+                 accent="#d97742", levels=["#3b1f0e", "#7a3b16", "#b5612a", "#d97742"], target="#ffffff", snake=["#ffc08a", "#ff9a52", "#f07f3a", "#d96a2c"]),
     "light": dict(bg="#ffffff", border="#d0d7de", empty="#ebedf0", text="#57606a", title="#24292f",
-                  accent="#b5612a", levels=["#f5d0b0", "#e8a06b", "#d97742", "#7a3b16"]),
+                  accent="#b5612a", levels=["#f5d0b0", "#e8a06b", "#d97742", "#7a3b16"], target="#24292f", snake=["#3b1f0e", "#5a2c12", "#7a3b16", "#94491c"]),
 }
 FONT = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif"
 
@@ -166,27 +166,110 @@ def esc(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-# ---------- svg: heatmap ----------
+# ---------- svg: heatmap with snake ----------
 
-def heatmap(counts: dict[date, int], end: date, t: dict) -> str:
+DIRS = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+
+
+def _levels(counts: dict[date, int], end: date):
+    """first day of the grid and {(col,row): (date, count, level)} for every day up to `end`."""
+    last_sunday = end - timedelta(days=(end.weekday() + 1) % 7)  # week starts Sunday, like GitHub
+    first = last_sunday - timedelta(weeks=52)
+    nonzero = sorted(v for d, v in counts.items() if first <= d <= end and v > 0)
+    # mostly dark, a few bright days: ~50% / 30% / 13% / 7% of active days per level
+    q = [nonzero[min(len(nonzero) - 1, int(len(nonzero) * p))] for p in (0.5, 0.8, 0.93)] if nonzero else []
+    cells = {}
+    for wk in range(53):
+        for dow in range(7):
+            d = first + timedelta(weeks=wk, days=dow)
+            if d <= end:
+                v = counts.get(d, 0)
+                cells[(wk, dow)] = (d, v, 0 if v <= 0 else 1 + sum(v > x for x in q))
+    return first, cells
+
+
+def _bfs(start, heading, cols, rows=7):
+    """Shortest moves from (pos, heading) to every cell, never turning 180°. Returns {cell: [path]}."""
+    from collections import deque
+    prev = {(start, heading): None}
+    best: dict = {}
+    dq = deque([(start, heading)])
+    while dq:
+        state = dq.popleft()
+        pos, hd = state
+        if pos not in best:
+            best[pos] = state
+        for d in DIRS:
+            if d == (-hd[0], -hd[1]):
+                continue  # no U-turn on the spot
+            nxt = (pos[0] + d[0], pos[1] + d[1])
+            if not (cols[0] <= nxt[0] <= cols[1] and 0 <= nxt[1] < rows):
+                continue
+            ns = (nxt, d)
+            if ns not in prev:
+                prev[ns] = state
+                dq.append(ns)
+
+    def path_to(cell):
+        out, s = [], best[cell]
+        while prev[s] is not None:
+            out.append(s)
+            s = prev[s]
+        return [p for p, _ in reversed(out)], (best[cell][1] if out else heading)
+    return best, path_to
+
+
+def _route(food_by_level, rng):
+    """Greedy nearest-food route (dim levels first). Returns (path, eat_index_by_cell, final heading)."""
+    pos, hd = (-3, 0), (1, 0)
+    path, eat = [pos], {}
+    cols = (-3, 52)
+    for lv in (1, 2, 3, 4):
+        food = set(food_by_level.get(lv, ()))
+        while food:
+            best, path_to = _bfs(pos, hd, cols)
+            reach = {}
+            for c in food:
+                if c in best:
+                    reach[c] = path_to(c)
+            dmin = min(len(p) for p, _ in reach.values())
+            cand = [c for c, (p, _) in reach.items() if len(p) == dmin]
+            tgt = rng.choice(sorted(cand))
+            steps, hd = reach[tgt]
+            path += steps
+            pos = tgt
+            eat[tgt] = len(path) - 1
+            food.discard(tgt)
+    return path, eat, hd
+
+
+def _uturn(path, hd):
+    """Three cells that turn the snake around without a 180° flip, landing on path[-2]."""
+    p, q = path[-1], path[-2]
+    r = path[-3] if len(path) > 2 else None
+    perp = [(0, -1), (0, 1)] if hd[1] == 0 else [(-1, 0), (1, 0)]
+    for side in perp:
+        a = (p[0] + side[0], p[1] + side[1])
+        b = (a[0] - hd[0], a[1] - hd[1])
+        ok = 0 <= a[1] < 7 and 0 <= b[1] < 7 and -3 <= a[0] <= 52 and -3 <= b[0] <= 52
+        if ok and (r is None or (r[0] - q[0], r[1] - q[1]) != side):
+            return [a, b]
+    side = perp[0] if 0 <= p[1] - 1 else perp[1]
+    a = (p[0] + side[0], p[1] + side[1])
+    return [a, (a[0] - hd[0], a[1] - hd[1])]
+
+
+def heatmap(counts: dict[date, int], end: date, t: dict, seed: int | None = None) -> str:
+    import random
     cell, gap = 11, 3
     step = cell + gap
     left, top = 36, 46
-    last_sunday = end - timedelta(days=(end.weekday() + 1) % 7)  # week starts Sunday, like GitHub
-    first = last_sunday - timedelta(weeks=52)
-    year_total = sum(v for d, v in counts.items() if first <= d <= end)
-    nonzero = sorted(v for d, v in counts.items() if first <= d <= end and v > 0)
-
-    def level(v: int) -> int:
-        if v <= 0 or not nonzero:
-            return 0
-        # mostly dark, a few bright days: ~50% / 30% / 13% / 7% of active days per level
-        q = [nonzero[min(len(nonzero) - 1, int(len(nonzero) * p))] for p in (0.5, 0.8, 0.93)]
-        return 1 + sum(v > x for x in q)
+    first, cells = _levels(counts, end)
+    year_total = sum(v for _, v, _ in cells.values())
 
     w, h = left + 53 * step + 16, top + 7 * step + 40
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">',
-           "<style>.c{animation:f .6s ease backwards}@keyframes f{from{opacity:.35}}</style>",
+           None,  # <style> goes here once the snake is planned
            f'<rect x=".5" y=".5" width="{w-1}" height="{h-1}" rx="10" fill="{t["bg"]}" stroke="{t["border"]}"/>',
            f'<text x="{left}" y="24" fill="{t["title"]}" style="{FONT};font-size:15px;font-weight:600">'
            f'{year_total} contributions in the last year</text>']
@@ -199,16 +282,79 @@ def heatmap(counts: dict[date, int], end: date, t: dict) -> str:
             out.append(f'<text x="{left + wk * step}" y="{top - 8}" fill="{t["text"]}" '
                        f'style="{FONT};font-size:10px">{col_start:%b}</text>')
             prev_month = col_start.month
-        for dow in range(7):
-            d = col_start + timedelta(days=dow)
-            if d > end:
-                continue
-            v = counts.get(d, 0)
-            lv = level(v)
-            color = t["empty"] if lv == 0 else t["levels"][lv - 1]
-            out.append(f'<rect class="c" style="animation-delay:{wk * 18}ms" x="{left + wk * step}" '
-                       f'y="{top + dow * step}" width="{cell}" height="{cell}" rx="2" fill="{color}">'
-                       f'<title>{v} on {d.isoformat()}</title></rect>')
+
+    # --- plan the snake: best (shortest) of a few random routes, new seed every render ---
+    food: dict[int, list] = {}
+    for c, (_, _, lv) in cells.items():
+        if lv:
+            food.setdefault(lv, []).append(c)
+    seed = random.randrange(1 << 30) if seed is None else seed
+    master = random.Random(seed)
+    path, eat, hd = None, {}, (1, 0)
+    if food:
+        for _ in range(8):
+            cand = _route(food, random.Random(master.randrange(1 << 30)))
+            if path is None or len(cand[0]) < len(path):
+                path, eat, hd = cand
+        fwd = len(path)
+        full = path + _uturn(path, hd) + path[-2::-1]  # forward, turn around, walk back laying squares
+    else:
+        fwd, full = 0, []
+    seg = 4
+    ticks = max(1, len(full) + seg)
+    tick_ms = max(45, min(110, 70000 // ticks))
+    total = ticks * tick_ms + 1200  # short pause at the end, then it starts over
+    pct = lambda k: 100 * k * tick_ms / total  # noqa: E731
+    back_index = {}  # when the walking-back head reaches a cell
+    for i in range(len(full) - 1, fwd - 1, -1):
+        back_index[full[i]] = i
+    order = sorted(eat, key=eat.get)
+    target_from = {c: (eat[order[i - 1]] if i else 0) for i, c in enumerate(order)}
+
+    css = []
+    for (wk, dow), (d, v, lv) in sorted(cells.items()):
+        x, y = left + wk * step, top + dow * step
+        tip = f"<title>{v} on {d.isoformat()}</title>"
+        out.append(f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" rx="2" fill="{t["empty"]}">{tip}</rect>')
+        if not lv:
+            continue
+        name = f"c{wk}_{dow}"
+        k_eat = eat.get((wk, dow))
+        if k_eat is None:
+            out.append(f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" rx="2" fill="{t["levels"][lv-1]}">{tip}</rect>')
+            continue
+        k_back = back_index.get((wk, dow), len(full) - 1) + seg  # square reappears as the tail passes
+        e, b = pct(k_eat), pct(min(k_back, ticks))
+        css.append(f"@keyframes {name}{{0%,{e:.3f}%{{opacity:1}}{e + .001:.3f}%,{b:.3f}%{{opacity:0}}"
+                   f"{b + .001:.3f}%,100%{{opacity:1}}}}")
+        out.append(f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" rx="2" fill="{t["levels"][lv-1]}" '
+                   f'style="animation:{name} {total}ms step-end infinite">{tip}</rect>')
+        # the square the snake is heading for right now turns white
+        s0 = pct(target_from[(wk, dow)])
+        css.append(f"@keyframes w{name}{{0%{{opacity:{1 if s0 == 0 else 0}}}{s0:.3f}%,{e:.3f}%{{opacity:1}}"
+                   f"{e + .001:.3f}%,100%{{opacity:0}}}}")
+        out.append(f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" rx="2" fill="{t["target"]}" '
+                   f'style="opacity:0;animation:w{name} {total}ms step-end infinite"/>')
+
+    if full:
+        frames = [f"{pct(i):.3f}%{{transform:translate({left + p[0] * step}px,{top + p[1] * step}px)}}"
+                  for i, p in enumerate(full)]
+        lx, ly = left + full[-1][0] * step, top + full[-1][1] * step
+        frames.append(f"100%{{transform:translate({lx}px,{ly}px)}}")
+        css.append(f"@keyframes s{{{''.join(frames)}}}.s{{animation:s {total}ms linear infinite both}}")
+        body = []
+        for i in range(seg):
+            size = cell - i * 1.2
+            off = (cell - size) / 2
+            body.append(f'<g class="s" style="animation-delay:{i * tick_ms}ms"><rect x="{off:.1f}" y="{off:.1f}" '
+                        f'width="{size:.1f}" height="{size:.1f}" rx="{5 if i == 0 else 3}" fill="{t["snake"][i]}" '
+                        f'stroke="{t["bg"]}" stroke-width="1.2"/></g>')
+        out += list(reversed(body))  # head on top
+        # mask the area left of the grid so the snake slips in and out of the edge
+        out.append(f'<rect x="0" y="{top - 2}" width="{left - 3}" height="{7 * step}" fill="{t["bg"]}"/>')
+        for i, name in ((1, "Mon"), (3, "Wed"), (5, "Fri")):
+            out.append(f'<text x="8" y="{top + i * step + 9}" fill="{t["text"]}" style="{FONT};font-size:10px">{name}</text>')
+
     lx = w - 16 - 5 * step - 62
     ly = top + 7 * step + 18
     out.append(f'<text x="{lx}" y="{ly + 9}" fill="{t["text"]}" style="{FONT};font-size:10px">Less</text>')
@@ -216,101 +362,8 @@ def heatmap(counts: dict[date, int], end: date, t: dict) -> str:
         out.append(f'<rect x="{lx + 28 + i * step}" y="{ly}" width="{cell}" height="{cell}" rx="2" fill="{color}"/>')
     out.append(f'<text x="{lx + 32 + 5 * step}" y="{ly + 9}" fill="{t["text"]}" style="{FONT};font-size:10px">More</text>')
     out.append("</svg>")
+    out[1] = f"<style>{''.join(css)}</style>"
     return "\n".join(out)
-
-
-# ---------- svg: snake ----------
-
-def snake(counts: dict[date, int], end: date, t: dict) -> str:
-    """A snake that crawls the contribution grid and eats the squares (dim first, bright last)."""
-    cell, gap = 11, 3
-    step = cell + gap
-    pad = 12
-    last_sunday = end - timedelta(days=(end.weekday() + 1) % 7)
-    first = last_sunday - timedelta(weeks=52)
-    nonzero = sorted(v for d, v in counts.items() if first <= d <= end and v > 0)
-
-    def level(v: int) -> int:  # same thresholds as heatmap()
-        if v <= 0 or not nonzero:
-            return 0
-        q = [nonzero[min(len(nonzero) - 1, int(len(nonzero) * p))] for p in (0.5, 0.8, 0.93)]
-        return 1 + sum(v > x for x in q)
-
-    grid: dict[tuple[int, int], int] = {}  # (col, row) -> level, only days that exist
-    for wk in range(53):
-        for dow in range(7):
-            d = first + timedelta(weeks=wk, days=dow)
-            if d <= end:
-                grid[(wk, dow)] = level(counts.get(d, 0))
-
-    # route: greedy nearest food, eating dim levels before bright ones; moves one cell per tick
-    path = [(-1, 0)]
-    eat_tick: dict[tuple[int, int], int] = {}
-    for lv in (1, 2, 3, 4):
-        food = {p for p, l in grid.items() if l == lv}
-        while food:
-            cx, cy = path[-1]
-            tx, ty = min(food, key=lambda p: (abs(p[0] - cx) + abs(p[1] - cy), p))
-            while (cx, cy) != (tx, ty):  # horizontal first, then vertical
-                if cx != tx:
-                    cx += 1 if tx > cx else -1
-                else:
-                    cy += 1 if ty > cy else -1
-                path.append((cx, cy))
-            eat_tick[(tx, ty)] = len(path) - 1
-            food.discard((tx, ty))
-    # leave the grid to the right
-    cx, cy = path[-1]
-    while cx < 54:
-        cx += 1
-        path.append((cx, cy))
-
-    w, h = pad * 2 + 53 * step - gap, pad * 2 + 7 * step - gap
-    seg = 4
-    ticks = len(path) + seg
-    tick_ms = max(60, min(110, 40000 // max(1, ticks)))  # whole loop roughly 8–40 s
-    total = ticks * tick_ms + 1500  # +1.5 s pause on the empty grid
-    pct = lambda tick: 100 * tick * tick_ms / total  # noqa: E731
-
-    def xy(p):
-        return pad + p[0] * step, pad + p[1] * step
-
-    frames = []
-    for i, p in enumerate(path):
-        x, y = xy(p)
-        frames.append(f"{pct(i):.3f}%{{transform:translate({x}px,{y}px)}}")
-    x, y = xy(path[-1])
-    frames.append(f"100%{{transform:translate({x}px,{y}px)}}")
-
-    css = [f"@keyframes s{{{''.join(frames)}}}",
-           f".s{{animation:s {total}ms linear infinite both}}"]
-    body = []
-    for (cx_, cy_), lv in sorted(grid.items()):
-        x, y = xy((cx_, cy_))
-        body.append(f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" rx="2" fill="{t["empty"]}"/>')
-        if lv:
-            k = eat_tick[(cx_, cy_)]
-            a, b = pct(k), pct(k) + 0.01
-            css.append(f"@keyframes e{cx_}_{cy_}{{0%,{a:.3f}%{{opacity:1}}{b:.3f}%,99.9%{{opacity:0}}100%{{opacity:1}}}}")
-            body.append(f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" rx="2" '
-                        f'fill="{t["levels"][lv - 1]}" style="animation:e{cx_}_{cy_} {total}ms step-end infinite"/>')
-    # snake: head + 3 body segments, each trailing one tick behind
-    snake_svg = []
-    for i in range(seg):
-        size = cell - i * 1.2
-        off = (cell - size) / 2
-        color = t["accent"] if i == 0 else t["levels"][max(0, 3 - i)]
-        snake_svg.append(f'<g class="s" style="animation-delay:{i * tick_ms}ms">'
-                         f'<rect x="{off:.1f}" y="{off:.1f}" width="{size:.1f}" height="{size:.1f}" '
-                         f'rx="{2 + (3 if i == 0 else 1)}" fill="{color}"/></g>')
-    return "\n".join([
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}">',
-        f"<style>{''.join(css)}</style>",
-        f'<rect x=".5" y=".5" width="{w-1}" height="{h-1}" rx="10" fill="{t["bg"]}" stroke="{t["border"]}"/>',
-        *body,
-        *reversed(snake_svg),  # head drawn on top
-        "</svg>",
-    ])
 
 
 # ---------- svg: streak card ----------
@@ -413,8 +466,7 @@ def render(out_dir: Path) -> None:
         (out_dir / f"heatmap{sfx}.svg").write_text(heatmap(counts, end, t), encoding="utf-8")
         (out_dir / f"streak{sfx}.svg").write_text(streak_card(counts, end, t), encoding="utf-8")
         (out_dir / f"graph{sfx}.svg").write_text(graph(counts, end, t), encoding="utf-8")
-        (out_dir / f"snake{sfx}.svg").write_text(snake(counts, end, t), encoding="utf-8")
-    print(f"rendered 8 SVGs to {out_dir}")
+    print(f"rendered 6 SVGs to {out_dir}")
 
 
 if __name__ == "__main__":
