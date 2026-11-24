@@ -60,24 +60,33 @@ class Alisher:
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <h4>🎓 <a href="https://github.com/AlisherKshtykenov/university-coursework">university-coursework</a></h4>
-      ML and DL labs with reports: RF vs SVM, a NumPy neural net, Mask R-CNN vs YOLO-seg on COCO, CNNs on CIFAR, image denoising, and <b>PINNs</b> for the heat equation.
+      <h4>🧠 <a href="https://github.com/AlisherKshtykenov/cifar-cnn-ablation">cifar-cnn-ablation</a></h4>
+      12 CNNs trained from scratch, one technique changed at a time, from a 53% MLP to a <b>92.6% ResNet-9</b> on CIFAR-10 (69.6% top-1 on CIFAR-100). Every gain is measured: BatchNorm + Dropout +7.6 pp, residuals +2.5 pp.
       <br><br>
       <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch&logoColor=white">
-      <img src="https://img.shields.io/badge/scikit--learn-F7931E?style=flat-square&logo=scikitlearn&logoColor=white">
-      <img src="https://img.shields.io/badge/YOLO-111F68?style=flat-square">
-      <img src="https://img.shields.io/badge/Jupyter-F37626?style=flat-square&logo=jupyter&logoColor=white">
+      <img src="https://img.shields.io/badge/NumPy-013243?style=flat-square&logo=numpy&logoColor=white">
+      <img src="https://img.shields.io/badge/Apple_MPS-000000?style=flat-square&logo=apple&logoColor=white">
     </td>
     <td width="50%" valign="top">
-      <h4>🚗 <a href="https://github.com/AlisherKshtykenov/spring-react-fullstack">spring-react-fullstack</a></h4>
-      A Spring Boot 3 REST API with JWT security, Spring Data REST, OpenAPI and tests, plus six React 19 / TypeScript apps that consume it.
+      <h4>🎯 <a href="https://github.com/AlisherKshtykenov/instance-segmentation-benchmark">instance-segmentation-benchmark</a></h4>
+      Mask R-CNN v2 vs YOLO26-seg on COCO val2017: mask AP with pycocotools, FPS on GPU and CPU, and a speed vs accuracy map across input sizes. <b>AP 50.3 at 1.3 FPS vs AP 40.6 at 28 FPS</b>, and which one to ship where.
       <br><br>
-      <img src="https://img.shields.io/badge/Spring_Boot-6DB33F?style=flat-square&logo=springboot&logoColor=white">
-      <img src="https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black">
-      <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white">
+      <img src="https://img.shields.io/badge/torchvision-EE4C2C?style=flat-square&logo=pytorch&logoColor=white">
+      <img src="https://img.shields.io/badge/YOLO-111F68?style=flat-square">
+      <img src="https://img.shields.io/badge/COCO-d97742?style=flat-square">
     </td>
   </tr>
 </table>
+
+### 🔬 ML research
+
+| Project | What it answers | Headline |
+|---|---|---|
+| 🧠 [cifar-cnn-ablation](https://github.com/AlisherKshtykenov/cifar-cnn-ablation) | What is each CNN technique actually worth? | **92.6%** CIFAR-10 · **69.6%** CIFAR-100 |
+| 🎯 [instance-segmentation-benchmark](https://github.com/AlisherKshtykenov/instance-segmentation-benchmark) | Two-stage or one-stage segmentation, and when? | AP **50.3** vs **28 FPS** |
+| 🌡️ [pinn-heat-equation](https://github.com/AlisherKshtykenov/pinn-heat-equation) | Forward PINN vs finite differences, and an inverse PINN that recovers an unknown coefficient | α recovered to **0.004%** |
+| 📋 [tabular-ml-studies](https://github.com/AlisherKshtykenov/tabular-ml-studies) | RF vs SVM with error costs, an MLP in pure NumPy, PLE nets vs gradient boosting | bootstrap-tested choices |
+| 🏀 [nba-elo-eda](https://github.com/AlisherKshtykenov/nba-elo-eda) | 60 years of NBA games: stratification, confounding, χ², PCA | 4-part EDA |
 
 <details>
 <summary><b>🍎 Native macOS toys</b> (pure Swift, one file each, no Xcode project)</summary>
@@ -93,12 +102,12 @@ class Alisher:
 </details>
 
 <details>
-<summary><b>📊 More data science</b></summary>
+<summary><b>🌐 Full-stack</b></summary>
 <br>
 
 | Project | |
 |---|---|
-| [eda-assignments](https://github.com/AlisherKshtykenov/eda-assignments) | EDA of the NBA All Elo dataset: distributions, outliers, bivariate analysis |
+| [spring-react-fullstack](https://github.com/AlisherKshtykenov/spring-react-fullstack) | Spring Boot 3 REST API with JWT, Spring Data REST, OpenAPI and tests, plus six React 19 / TypeScript apps |
 
 </details>
 
