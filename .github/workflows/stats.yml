@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      STATS_TZ: Asia/Almaty
+      STATS_TZ: Asia/Tokyo # TEMP: new-day test, revert to Asia/Almaty
     steps:
       - uses: actions/checkout@v4
 
