@@ -144,7 +144,6 @@ class Alisher:
   </picture>
 </p>
 
-<sub><p align="center">Self-hosted stats from <a href="https://github.com/AlisherKshtykenov/AlisherKshtykenov/blob/stats/data/contributions.csv">data/contributions.csv</a> (branch <code>stats</code>), redrawn every 6 hours.</p></sub>
 
 <details>
 <summary>🇷🇺 <b>Коротко по-русски</b></summary>
