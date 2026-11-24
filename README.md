@@ -144,7 +144,14 @@ class Alisher:
   </picture>
 </p>
 
-<sub><p align="center">Self-hosted stats from <a href="data/contributions.csv">data/contributions.csv</a>, redrawn every 6 hours.</p></sub>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/AlisherKshtykenov/AlisherKshtykenov/output/snake-dark.svg">
+    <img alt="Snake eating the contribution grid" src="https://raw.githubusercontent.com/AlisherKshtykenov/AlisherKshtykenov/output/snake.svg" width="100%">
+  </picture>
+</p>
+
+<sub><p align="center">Self-hosted stats from <a href="https://github.com/AlisherKshtykenov/AlisherKshtykenov/blob/stats/data/contributions.csv">data/contributions.csv</a> (branch <code>stats</code>), redrawn every 6 hours.</p></sub>
 
 <details>
 <summary>🇷🇺 <b>Коротко по-русски</b></summary>
