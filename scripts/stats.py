@@ -180,7 +180,8 @@ def heatmap(counts: dict[date, int], end: date, t: dict) -> str:
     def level(v: int) -> int:
         if v <= 0 or not nonzero:
             return 0
-        q = [nonzero[min(len(nonzero) - 1, int(len(nonzero) * p))] for p in (0.25, 0.5, 0.75)]
+        # mostly dark, a few bright days: ~50% / 30% / 13% / 7% of active days per level
+        q = [nonzero[min(len(nonzero) - 1, int(len(nonzero) * p))] for p in (0.5, 0.8, 0.93)]
         return 1 + sum(v > x for x in q)
 
     w, h = left + 53 * step + 16, top + 7 * step + 40
