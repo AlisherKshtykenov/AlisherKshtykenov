@@ -83,6 +83,7 @@ class Alisher:
 | Project | What it answers | Headline |
 |---|---|---|
 | 🧠 [cifar-cnn-ablation](https://github.com/AlisherKshtykenov/cifar-cnn-ablation) | What is each CNN technique actually worth? | **92.6%** CIFAR-10 · **69.6%** CIFAR-100 |
+| ✨ [cifar10-image-denoising](https://github.com/AlisherKshtykenov/cifar10-image-denoising) | Autoencoders, U-Net or DnCNN: what actually removes noise, and which idea matters? | **28.45 dB** PSNR, skips worth **+2.8 dB** |
 | 🎯 [instance-segmentation-benchmark](https://github.com/AlisherKshtykenov/instance-segmentation-benchmark) | Two-stage or one-stage segmentation, and when? | AP **50.3** vs **28 FPS** |
 | 🌡️ [pinn-heat-equation](https://github.com/AlisherKshtykenov/pinn-heat-equation) | Forward PINN vs finite differences, and an inverse PINN that recovers an unknown coefficient | α recovered to **0.004%** |
 | 🌊 [pinn-viscoacoustic-wave](https://github.com/AlisherKshtykenov/pinn-viscoacoustic-wave) | 2D wave equation in a depth-dependent medium: what does dropping the coefficient-gradient terms cost? | **2.4%** vs **7.9%** error |
