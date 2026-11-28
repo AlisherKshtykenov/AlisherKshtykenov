@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="495" height="195" viewBox="0 0 495 195">
+<style>.r{animation:p 2.4s ease-in-out infinite}@keyframes p{50%{stroke-opacity:.55}}</style>
+<rect x=".5" y=".5" width="494" height="194" rx="10" fill="#ffffff" stroke="#d0d7de"/>
+<line x1="165.0" y1="28" x2="165.0" y2="167" stroke="#d0d7de"/>
+<line x1="330.0" y1="28" x2="330.0" y2="167" stroke="#d0d7de"/>
+<text x="82.5" y="92" text-anchor="middle" fill="#24292f" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:28px;font-weight:700">1250</text>
+<text x="82.5" y="122" text-anchor="middle" fill="#24292f" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:400">Total Contributions</text>
+<text x="82.5" y="146" text-anchor="middle" fill="#57606a" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;font-weight:400">Nov 25, 2025 – Present</text>
+<circle class="r" cx="247.5" cy="78" r="40" fill="none" stroke="#b5612a" stroke-width="5" transform="rotate(-90 247.5 78)"/>
+<text x="247.5" y="89" text-anchor="middle" fill="#24292f" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:28px;font-weight:700">17</text>
+<text x="247.5" y="146" text-anchor="middle" fill="#b5612a" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:700">Current Streak</text>
+<text x="247.5" y="168" text-anchor="middle" fill="#57606a" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;font-weight:400">Nov 12 – Nov 28</text>
+<text x="412.5" y="92" text-anchor="middle" fill="#24292f" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:28px;font-weight:700">46</text>
+<text x="412.5" y="122" text-anchor="middle" fill="#24292f" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:400">Longest Streak</text>
+<text x="412.5" y="146" text-anchor="middle" fill="#57606a" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:12px;font-weight:400">Jan 23 – Mar 9</text>
+</svg>
